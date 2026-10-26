@@ -6,6 +6,8 @@ Atualização: 26/10/2026 (America/Sao_Paulo). Fonte única de progresso.
 
 Checkpoint 1 aprovado pelo usuário com “prosiga”. **M1 concluído; aguardar “prossiga” para M2.** ADRs 001–010 e adaptação ADR-012 aceitas. Evidência local REA continua parcial; implementação consultou somente especificação e fontes públicas. Próxima ação autorizável: M2.1, CRUD de páginas e Storage privado, lendo contratos e ADRs antes de editar. Não iniciar automaticamente.
 
+**Dados locais a preservar:** após o M1, uma conta pessoal foi criada no Bloco local a pedido do usuário. A definição de senha foi entregue ao usuário na interface, sem fornecer senha ao agente. Esta stack deixou de conter somente fixtures descartáveis: não repetir `db reset`, purgar contas ou remover volumes contra ela. Provas futuras de banco vazio precisam de instância de teste isolada; preservar os dados locais existentes. Nenhum e-mail, senha ou token pessoal deve ser registrado no repositório.
+
 Docker Desktop iniciado via Computer Use a pedido do usuário; engine confirmado `29.8.2 linux`, CLI Supabase local `2.122.0`. O binding inicial falhou em quatro movimentos concorrentes; usuário aprovou expressamente a [ADR-012](adr/ADR-012-stable-block-content.md). Conteúdo agora tem fragmentos estáveis separados da posição, com histórico pertencente à página. Provas ampliadas passaram; nenhum requisito de preservação foi invertido ou ignorado.
 
 Fechamento M1: build, lint, typecheck, 38 testes unitários/de modelo, 121 pgTAP, cinco integrações Postgres/Yjs e sete E2E verdes; banco vazio reproduzido e tipos sem drift. Confirmação/recuperação usam mensagens reais do Mailpit local; Google real aguarda credenciais externas. CI versionado, sem push/deploy. Detalhes, medições e limites abaixo.
