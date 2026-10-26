@@ -1,0 +1,10 @@
+packages:
+  - .
+
+strictPeerDependencies: true
+
+allowBuilds:
+  "*": false
+
+patchedDependencies:
+  "@supabase/auth-js@2.118.0": patches/@supabase__auth-js@2.118.0.patch

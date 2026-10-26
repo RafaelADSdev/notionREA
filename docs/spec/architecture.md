@@ -1,6 +1,6 @@
 # Arquitetura proposta e avaliações
 
-Este documento desenvolve as ADRs curtas. Todas as decisões são D, com fontes públicas apontadas, e ficam propostas até o Checkpoint 1. Não derivam de estrutura de código, esquema privado ou protocolo da referência.
+Este documento desenvolve as ADRs curtas. Todas as decisões são D, com fontes públicas apontadas, aprovadas no Checkpoint 1. A adaptação ADR-012 foi aprovada separadamente no M1. Não derivam de estrutura de código, esquema privado ou protocolo da referência.
 
 ## ADR-001 — opções de armazenamento
 
@@ -20,6 +20,8 @@ Recomendação: Yjs binário canônico por página, com atualizações duráveis
 Fonte: [updates Yjs](https://docs.yjs.dev/api/document-updates) fundamenta idempotência/ordem/convergência; não prova consistência semântica dos comandos do Bloco. A análise local não oferece fundamento para escolher armazenamento.
 
 ## ADR-002 — editor e licenças
+
+Complemento aprovado no M1: o Y.Doc continua canônico por página, mas a árvore é um mapa de placements e cada bloco possui fragmento TipTap estável. Mover não remove/reinsere o fragmento de conteúdo. Exclusão lógica preserva texto concorrente para restauração; uma página possui seu próprio histórico. Seleção entre fragmentos, clipboard, IME e composição completa pertencem ao adaptador do M3; as provas iniciais não substituem esses critérios. Ver [ADR-012](../adr/ADR-012-stable-block-content.md) e [ADR-015](../adr/ADR-015-history-ownership.md).
 
 | Alternativa | Adequação pública | Consequência D |
 | --- | --- | --- |
@@ -71,7 +73,7 @@ FTS por página com peso maior no título, vetores em português/inglês e norma
 
 M1 deve testar, em fixture sem UI de produto final: duas instâncias Yjs/TipTap; edições simultâneas no mesmo texto; mover/editar/apagar bloco em paralelo, inclusive filho de toggle, tabela e coluna; duplicação e reordenação de updates; reconexão sem evento; CAS/projeções concorrentes; compactação durante bootstrap; revogação com canal aberto; undo local. Critério: convergência e preservação de cada operação aceita com semântica documentada, sem duplicar identidade de bloco ou perder texto aceito em movimento.
 
-Se o binding padrão não atender a estrutura concorrente, **não** marcar o spike verde ou prometer resolver no M5. Registrar evidência, propor adaptação de modelo de árvore/identidade ou alternativa de armazenamento e retornar à decisão cara antes de fixar migrations de conteúdo. Nenhuma prova foi executada nesta fase.
+Se o binding padrão não atender a estrutura concorrente, **não** marcar o spike verde ou prometer resolver no M5. Esse gate reabriu a decisão e levou à ADR-012 aprovada. Resultados das provas ficam no PLAN; limites do adaptador e da prontidão estão nas ADRs 012/015/017, sem substituir os critérios do editor de produto.
 
 ## Toolchain e evolução
 

@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality and local integration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+        with:
+          version: 11.25.0
+          run_install: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install immutable dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify Linux container engine
+        run: test "$(docker info --format '{{.OSType}}')" = linux
+      - name: Start isolated Supabase services
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm supabase start 2>&1 | sed -E '/(secret|publishable|anon.?key|service.role|jwt|password|postgresql:\/\/|sb_secret_|sb_publishable_|eyJ[A-Za-z0-9_-]{15})/Id'
+      - name: Recreate local database from migrations
+        run: pnpm supabase db reset --local
+      - name: Create ignored local environment without printing credentials
+        run: pnpm local:env
+      - name: Check generated database types
+        run: pnpm db:types:check
+      - name: Lint
+        run: pnpm lint
+      - name: Type check
+        run: pnpm typecheck
+      - name: Unit and collaboration model tests
+        run: pnpm test
+      - name: Database policies and integrity tests
+        run: pnpm test:rls
+      - name: Local integration tests
+        run: pnpm test:integration
+      - name: Build
+        run: pnpm build
+      - name: Install Chromium and operating-system dependencies
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Browser acceptance tests
+        run: pnpm test:e2e
+      - name: Dependency audit
+        run: pnpm audit --audit-level high
+      - name: Check whitespace
+        run: git diff --check
+      - name: Stop local services
+        if: always()
+        run: pnpm supabase stop
