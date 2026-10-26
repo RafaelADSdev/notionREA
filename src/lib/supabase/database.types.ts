@@ -87,6 +87,100 @@ export type Database = {
           },
         ];
       };
+      page_favorites: {
+        Row: {
+          created_at: string;
+          page_id: string;
+          user_id: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          page_id: string;
+          user_id: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          page_id?: string;
+          user_id?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "page_favorites_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "page_favorites_workspace_id_user_id_fkey";
+            columns: ["workspace_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "workspace_members";
+            referencedColumns: ["workspace_id", "user_id"];
+          },
+        ];
+      };
+      page_files: {
+        Row: {
+          actual_size: number | null;
+          created_at: string;
+          expected_size: number;
+          finalized_at: string | null;
+          id: string;
+          mime_type: string;
+          object_path: string;
+          original_name: string;
+          page_id: string;
+          sha256: string | null;
+          status: string;
+          uploaded_by: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          actual_size?: number | null;
+          created_at?: string;
+          expected_size: number;
+          finalized_at?: string | null;
+          id?: string;
+          mime_type: string;
+          object_path: string;
+          original_name: string;
+          page_id: string;
+          sha256?: string | null;
+          status?: string;
+          uploaded_by: string;
+          workspace_id: string;
+        };
+        Update: {
+          actual_size?: number | null;
+          created_at?: string;
+          expected_size?: number;
+          finalized_at?: string | null;
+          id?: string;
+          mime_type?: string;
+          object_path?: string;
+          original_name?: string;
+          page_id?: string;
+          sha256?: string | null;
+          status?: string;
+          uploaded_by?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "page_files_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
       page_grants: {
         Row: {
           page_id: string;
@@ -126,43 +220,83 @@ export type Database = {
       };
       pages: {
         Row: {
+          cover_file_id: string | null;
           created_at: string;
+          created_by: string;
           deleted_at: string | null;
+          deleted_batch_id: string | null;
+          deleted_by: string | null;
+          deleted_parent_id: string | null;
+          deleted_position: string | null;
+          icon: string;
           id: string;
           owner_id: string;
           parent_id: string | null;
           position: string;
+          request_hash: string;
+          request_id: string;
           restricted: boolean;
+          revision: number;
+          search_vector: unknown;
           title: string;
           updated_at: string;
           workspace_id: string;
         };
         ComputedFields: never;
         Insert: {
+          cover_file_id?: string | null;
           created_at?: string;
+          created_by: string;
           deleted_at?: string | null;
+          deleted_batch_id?: string | null;
+          deleted_by?: string | null;
+          deleted_parent_id?: string | null;
+          deleted_position?: string | null;
+          icon?: string;
           id?: string;
           owner_id: string;
           parent_id?: string | null;
           position?: string;
+          request_hash?: string;
+          request_id?: string;
           restricted?: boolean;
+          revision?: number;
+          search_vector?: unknown;
           title?: string;
           updated_at?: string;
           workspace_id: string;
         };
         Update: {
+          cover_file_id?: string | null;
           created_at?: string;
+          created_by?: string;
           deleted_at?: string | null;
+          deleted_batch_id?: string | null;
+          deleted_by?: string | null;
+          deleted_parent_id?: string | null;
+          deleted_position?: string | null;
+          icon?: string;
           id?: string;
           owner_id?: string;
           parent_id?: string | null;
           position?: string;
+          request_hash?: string;
+          request_id?: string;
           restricted?: boolean;
+          revision?: number;
+          search_vector?: unknown;
           title?: string;
           updated_at?: string;
           workspace_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "pages_cover_file_fk";
+            columns: ["cover_file_id", "workspace_id", "id"];
+            isOneToOne: false;
+            referencedRelation: "page_files";
+            referencedColumns: ["id", "workspace_id", "page_id"];
+          },
           {
             foreignKeyName: "pages_parent_id_workspace_id_fkey";
             columns: ["parent_id", "workspace_id"];
@@ -288,6 +422,7 @@ export type Database = {
     };
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: string };
+      clear_page_cover: { Args: { p_expected_revision: number; p_page_id: string }; Returns: number };
       commit_document: {
         Args: {
           p_actor_id: string;
@@ -309,7 +444,57 @@ export type Database = {
         Args: { p_email: string; p_token_hash: string; p_workspace_id: string };
         Returns: string;
       };
+      create_page: {
+        Args: { p_parent_id?: string; p_request_id?: string; p_title?: string; p_workspace_id: string };
+        Returns: string;
+      };
       create_workspace: { Args: { p_name: string; p_request_id: string }; Returns: string };
+      finalize_page_cover: {
+        Args: {
+          p_actor_id: string;
+          p_actual_size: number;
+          p_expected_revision: number;
+          p_file_id: string;
+          p_sha256: string;
+        };
+        Returns: number;
+      };
+      get_page_metadata: { Args: { p_page_id: string; p_workspace_id: string }; Returns: Json };
+      get_page_role: { Args: { p_page_id: string }; Returns: string };
+      list_page_breadcrumbs: {
+        Args: { p_after_depth?: number; p_page_id: string };
+        Returns: {
+          depth: number;
+          id: string;
+          title: string;
+        }[];
+      };
+      list_page_children: {
+        Args: {
+          p_after_id?: string;
+          p_after_position?: string;
+          p_parent_id?: string;
+          p_workspace_id: string;
+        };
+        Returns: {
+          icon: string;
+          id: string;
+          parent_id: string;
+          position: string;
+          revision: number;
+          title: string;
+        }[];
+      };
+      list_trash: {
+        Args: { p_after_id?: string; p_query?: string; p_workspace_id: string };
+        Returns: {
+          deleted_at: string;
+          id: string;
+          parent_id: string;
+          revision: number;
+          title: string;
+        }[];
+      };
       list_workspace_members: {
         Args: { p_after_created_at?: string; p_after_user_id?: string; p_workspace_id: string };
         Returns: {
@@ -319,10 +504,59 @@ export type Database = {
           user_id: string;
         }[];
       };
+      move_page: {
+        Args: {
+          p_accept_acl_change?: boolean;
+          p_before_id?: string;
+          p_expected_revision?: number;
+          p_keep_parent?: boolean;
+          p_page_id: string;
+          p_parent_id?: string;
+          p_preview_hash?: string;
+        };
+        Returns: Json;
+      };
+      prepare_page_file: {
+        Args: { p_mime_type: string; p_name: string; p_page_id: string; p_size: number };
+        Returns: string;
+      };
       remove_member: { Args: { p_user_id: string; p_workspace_id: string }; Returns: undefined };
+      remove_page: { Args: { p_expected_revision: number; p_page_id: string }; Returns: string };
+      restore_page: {
+        Args: {
+          p_accept_acl_change?: boolean;
+          p_expected_revision?: number;
+          p_page_id: string;
+          p_parent_id?: string;
+          p_preview_hash?: string;
+          p_restore_original?: boolean;
+        };
+        Returns: Json;
+      };
+      search_pages: {
+        Args: {
+          p_after_id?: string;
+          p_after_rank?: number;
+          p_after_updated_at?: string;
+          p_query: string;
+          p_workspace_id: string;
+        };
+        Returns: {
+          icon: string;
+          id: string;
+          rank: number;
+          title: string;
+          updated_at: string;
+        }[];
+      };
       set_member_role: {
         Args: { p_role: string; p_user_id: string; p_workspace_id: string };
         Returns: undefined;
+      };
+      toggle_page_favorite: { Args: { p_page_id: string }; Returns: boolean };
+      update_page: {
+        Args: { p_expected_revision: number; p_page_id: string; p_patch: Json };
+        Returns: number;
       };
     };
     Enums: {

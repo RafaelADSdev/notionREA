@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { Client } from "pg";
+import { testWorkdir } from "../../scripts/test-stack.mjs";
 
 export function localDatabaseUrl(): string {
   let connectionString = process.env.BLOCO_TEST_DATABASE_URL;
@@ -12,7 +13,7 @@ export function localDatabaseUrl(): string {
     try {
       const captured = execFileSync(
         process.execPath,
-        [packageManagerEntry, "supabase", "status", "--output", "json"],
+        [packageManagerEntry, "supabase", "--workdir", testWorkdir, "status", "--output", "json"],
         {
           cwd: process.cwd(),
           encoding: "utf8",
@@ -45,10 +46,10 @@ export function localDatabaseUrl(): string {
   if (
     !["postgres:", "postgresql:"].includes(target.protocol) ||
     target.hostname !== "127.0.0.1" ||
-    target.port !== "54322" ||
+    target.port !== "55322" ||
     target.pathname !== "/postgres"
   ) {
-    throw new Error("Database integration tests only permit 127.0.0.1:54322/postgres.");
+    throw new Error("Database integration tests only permit 127.0.0.1:55322/postgres.");
   }
   return connectionString;
 }

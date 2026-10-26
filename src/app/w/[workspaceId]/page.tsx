@@ -1,28 +1,42 @@
 import Link from "next/link";
-import { Icon } from "@/components/icon";
+import { CreatePageControl } from "@/features/pages/create-control";
+import { PageList } from "@/features/pages/page-list";
+import { childrenOf } from "@/features/pages/queries";
 
-export default async function WorkspacePage({ params }: { params: Promise<{ workspaceId: string }> }) {
+export default async function WorkspacePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ workspaceId: string }>;
+  searchParams: Promise<{ afterPosition?: string; afterId?: string }>;
+}) {
   const { workspaceId } = await params;
+  const query = await searchParams;
+  const children = await childrenOf(workspaceId, null, query.afterPosition, query.afterId);
+  const last = children.items.at(-1);
   return (
     <>
       <div className="document-heading">
-        <h1>Há espaço para boas ideias.</h1>
-        <p>Este workspace é um ponto de encontro para o que você e sua equipe querem construir.</p>
+        <h1>As suas páginas.</h1>
+        <p>Um lugar para organizar suas ideias e encontrar o que importa.</p>
       </div>
-      <section className="welcome-sheet">
-        <div className="welcome-emblem">
-          <Icon name="layers" size={54} />
-        </div>
-        <h2>Comece pelas pessoas.</h2>
-        <p>
-          Abra a equipe para ver quem está por aqui. Se você administra este espaço, pode convidar outras
-          pessoas e organizar os acessos.
-        </p>
-        <Link className="button" href={`/w/${workspaceId}/members`}>
-          Abrir equipe
-          <Icon name="arrow" size={18} />
+      <div className="section-heading">
+        <h2>Páginas no workspace</h2>
+        <CreatePageControl workspaceId={workspaceId} />
+      </div>
+      <PageList pages={children.items} workspaceId={workspaceId} />
+      {children.more && last && (
+        <Link
+          className="pagination-link"
+          href={`?${new URLSearchParams({ afterPosition: last.position, afterId: last.id })}`}
+        >
+          Próximas páginas
         </Link>
-      </section>
+      )}
+      <footer className="page-home-footer">
+        <p className="notice">Seu workspace também é um espaço para trabalhar em conjunto.</p>
+        <Link href={`/w/${workspaceId}/members`}>Abrir equipe</Link>
+      </footer>
     </>
   );
 }

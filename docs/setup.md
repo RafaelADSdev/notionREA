@@ -13,15 +13,13 @@ Na raiz do repositório:
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm supabase start
-pnpm supabase db reset --local
 pnpm local:env
-pnpm db:types:check
 pnpm dev --hostname 127.0.0.1
 ```
 
 A instalação ignora scripts de ciclo de vida de dependências; `pnpm-workspace.yaml` também os nega por padrão e exige peers compatíveis. Não desative essas políticas para contornar falhas. Mantenha `pnpm-lock.yaml` e patches versionados; não adicione outro lockfile. O [guia da CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) explica seu funcionamento por projeto.
 
-`db reset --local` destrói os dados da stack local identificada por `supabase/config.toml`, reaplica migrations e não deve ser usado se houver dados locais a preservar. Nunca substitua `--local` por uma conexão remota para executar testes. Não use `--ignore-health-check` para declarar o banco pronto.
+O projeto `bloco` contém dados locais a preservar. Não execute reset, parada/recriação ou remoção de volumes nessa stack para verificar código. Migrações da aplicação devem ser aplicadas de modo aditivo, após validação na stack isolada abaixo. Nunca use uma conexão remota para executar testes. Não use `--ignore-health-check` para declarar o banco pronto.
 
 `local:env` consulta somente o endpoint local esperado, escreve `.env.local` sem mostrar valores e recusa sobrescrita. Se o arquivo já existir, preserve-o e altere os nomes necessários localmente com base em `.env.example`; não envie seu conteúdo ao chat, issue ou log. Para atualizar tipos após uma migration, rode `pnpm db:types`, revise o diff e valide com `pnpm db:types:check`.
 
@@ -94,7 +92,18 @@ Faça entrada real com uma conta de teste autorizada, conceda os escopos necess�
 
 ## Verificações e CI
 
-Com a stack e `.env.local` disponíveis:
+Os testes utilizam exclusivamente o projeto `bloco-test`, API `http://127.0.0.1:55321`, Postgres `55322`, Mailpit `55324` e aplicação `http://127.0.0.1:3001`. O ambiente pessoal em `3000` e `54321–54324` permanece independente. A preparação copia a configuração, migrations e testes canônicos para `.supabase/testing/`, ignorado pelo Git; não edite essa cópia.
+
+Prepare os serviços e recrie **somente o banco descartável de teste**:
+
+```sh
+pnpm test:env
+pnpm test:db:reset
+```
+
+`test:env` inicia os serviços mínimos necessários e gera `.env.test.local`, também ignorado, sem imprimir credenciais. `test:db:reset` atualiza as cópias e exige projeto/portas de teste antes do reset. Após mudar migrations, repita o reset isolado. Esses comandos nunca carregam `.env.local`.
+
+Com a stack de teste disponível:
 
 ```sh
 pnpm lint
@@ -103,15 +112,19 @@ pnpm test
 pnpm test:spike
 pnpm test:rls
 pnpm test:integration
+pnpm test:perf
 pnpm db:types:check
 pnpm build
+pnpm test:build
 pnpm exec playwright install chromium
 pnpm test:e2e
 pnpm audit --audit-level high
 git diff --check
 ```
 
-`test:e2e` inicia o build por `pnpm start`, utiliza contas e páginas sintéticas e aceita somente o endpoint local previsto. Feche outro servidor em 3000 antes de executar se precisar de isolamento. Para CI Linux, a instalação do navegador usa `--with-deps chromium`. Não gerar/uploadar traces, screenshots ou logs contendo senhas, cookies ou chaves.
+`test:build` compila com variáveis isoladas e saída `.next-test`; o build normal continua em `.next`. `test:e2e` inicia exclusivamente o build de prova em `3001`, com reutilização de servidor desabilitada, e utiliza contas/páginas sintéticas. Se `3001` estiver ocupada, investigue antes de parar um processo. Não aponte testes ao servidor pessoal. Para CI Linux, a instalação do navegador usa `--with-deps chromium`. Não gerar/uploadar traces, screenshots ou logs contendo senhas, cookies ou chaves.
+
+`db:types` e `db:types:check` inspecionam somente o schema da stack de teste; integre novas migrations antes de gerar. `test:rls` e `test:integration` também recusam o banco pessoal. Para parar somente os serviços descartáveis: `pnpm test:env:stop`. Não use `pnpm supabase stop` como encerramento de testes.
 
 O workflow versionado em `.github/workflows/ci.yml` reproduz os gates no Ubuntu com Docker, Node e pnpm fixados. Ele não publica a aplicação, não precisa de segredo de produção e não prova OAuth Google ou entrega SMTP. Exigir o check de CI na proteção da branch quando houver repositório remoto; essa configuração remota não é feita pelo arquivo YAML.
 

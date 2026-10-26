@@ -4,7 +4,7 @@ Atualização: 26/10/2026 (America/Sao_Paulo). Fonte única de progresso.
 
 ## Estado e próximo passo
 
-Checkpoint 1 aprovado pelo usuário com “prosiga”. **M1 concluído; aguardar “prossiga” para M2.** ADRs 001–010 e adaptação ADR-012 aceitas. Evidência local REA continua parcial; implementação consultou somente especificação e fontes públicas. Próxima ação autorizável: M2.1, CRUD de páginas e Storage privado, lendo contratos e ADRs antes de editar. Não iniciar automaticamente.
+Checkpoint 1 e M1 aprovados; **M2 concluído, M3 é o próximo marco**. M2–M6 autorizados para continuidade sem pausas pelo pedido posterior “prossiga e pode ir implementando tudo”, reiterado nas instruções de continuidade. Manter testes, revisão, commits e relatórios por marco; só interromper por bloqueio real ou decisão cara de reverter. ADRs 001–010 e adaptação ADR-012 aceitas. Implementação consulta exclusivamente especificação e fontes públicas. Próximo passo: M3.1, schema/validação/persistência do editor, seguido da área de escrita; preservar dados pessoais locais e não tratar o spike como editor completo.
 
 **Dados locais a preservar:** após o M1, uma conta pessoal foi criada no Bloco local a pedido do usuário. A definição de senha foi entregue ao usuário na interface, sem fornecer senha ao agente. Esta stack deixou de conter somente fixtures descartáveis: não repetir `db reset`, purgar contas ou remover volumes contra ela. Provas futuras de banco vazio precisam de instância de teste isolada; preservar os dados locais existentes. Nenhum e-mail, senha ou token pessoal deve ser registrado no repositório.
 
@@ -31,8 +31,8 @@ Fechamento M1: build, lint, typecheck, 38 testes unitários/de modelo, 121 pgTAP
 | Marco             | Escopo                                                                     | Status                |
 | ----------------- | -------------------------------------------------------------------------- | --------------------- |
 | F1 / Checkpoint 1 | Inventário, fluxos, modelo, lacunas, MoSCoW, especificação e ADRs          | Aprovado pelo usuário |
-| M1 Fundação       | Ambiente, prova de risco CRDT, auth, workspaces, RLS, shell original, CI   | Concluído; aguarda usuário |
-| M2 Páginas        | Hierarquia, CRUD, ordem, capas, favoritos, lixeira e busca                 | Planejado             |
+| M1 Fundação       | Ambiente, prova de risco CRDT, auth, workspaces, RLS, shell original, CI   | Concluído |
+| M2 Páginas        | Hierarquia, CRUD, ordem, capas, favoritos, lixeira e busca                 | Concluído |
 | M3 Editor         | Blocos, inline, arquivos, interações, autosave e base colaborativa         | Planejado             |
 | M4 Databases      | Propriedades, cinco views, filtros, agrupamento e templates                | Planejado             |
 | M5 Colaboração    | Edição simultânea, presença, comentários, ACL e publicação somente leitura | Planejado             |
@@ -100,12 +100,32 @@ Os itens abaixo são fatias internas, não marcos adicionais que dispensem os ga
 
 ## Pendências e riscos para continuidade
 
+- Testes usam Supabase `bloco-test`/portas 55321–55324 e aplicação 3001; nunca resetar a stack pessoal. Banco pessoal recebe somente migrations aditivas verificadas. [ADR-018](adr/ADR-018-isolated-testing.md).
+- M3: interface atual organiza páginas, mas ainda não oferece o corpo de escrita. Implementar os blocos, seleção/clipboard/IME, persistência validada, autosave e projeções definidos no contrato; não substituir por textarea ou sobrescrita de documento inteiro.
+
 - Google real e entrega externa de e-mail exigem credenciais e configuração próprias antes do deploy; código/roteiro presentes, sem alegar validação do provedor externo.
 - O endpoint público de validação de conteúdo e provider de produto serão M3/M5; não estão expostos pelo M1. Seleção entre fragmentos, IME, clipboard, montagem/virtualização e todos os tipos finais de bloco continuam gates do editor, sem dívida de perda de texto já aceita.
 - Configuração real Google/e-mail e recursos Vercel/Supabase dependem de contas/credenciais que não foram acessadas; solicitar somente quando bloquear a etapa.
 - Evidência local REA permanece parcial; fluxos foram especificados por fontes públicas e decisões D. Capturas do usuário só são necessárias se exigir paridade exata dos detalhes U; não reabrir o app para implementar.
 - Intercâmbio é deliberadamente com perdas reportadas; não prometer recuperar views/ACL/histórico ausentes em Markdown/CSV.
 - Segurança, acessibilidade e performance são gates de cada marco; números em qualidade são metas propostas, não resultados medidos.
+
+## Evidências de fechamento do M2
+
+- Implementação: migrations aditivas `202610260002_pages.sql` e `202610260003_page_files.sql`, domínio `src/features/pages/`, arquivos privados e rotas de páginas/favoritos/lixeira/busca. Metadados não substituem o documento Yjs; corpo editável começa no M3.
+- Gates: instalação frozen sem scripts, lint, typecheck, build de produção e de teste, 72 testes unitários/modelo, 10 provas focadas do spike, 321 pgTAP, 10 integrações, paridade dos tipos gerados, auditoria de dependências e diff sem whitespace passaram. Os 14 E2E passaram em 37,5 s; após o último ajuste de ocultação do seletor de capa, os dois testes afetados passaram novamente, incluindo upload/reload e ausência de overflow em desktop/móvel.
+- Banco vazio reproduzido exclusivamente em `bloco-test`; comandos guardam projeto, origem, portas e diretórios. Aplicação de prova em 3001 usa `.next-test`/ambiente próprios, sem reutilizar servidor pessoal. CI atualizado para a mesma separação e orçamento de busca; execução remota continua não solicitada.
+- Hierarquia: cadeia de 1.000 níveis, ciclos, ordem fracionária ordinal/rebalanceamento, colisão de inserções/movimentos e CAS de metadados cobertos. Navegador comprova teclado, mouse, cancelamento de arraste e movimento para dentro de outra página com identidade persistida.
+- ACL: raízes privadas e filhas com herança; movimento/restore que altera capacidades exige preview vinculado a hash, ator, revisão e escopos. Restauração usa revisão e lote, não revive exclusão independente anterior. Revisão independente encontrou e corrigiu herança inicial, CAS de restauração e vazamento de referências privadas; regressões correspondentes passaram.
+- Leitura: `get_page_metadata` devolve whitelist; colunas internas/pai físico sem SELECT direto. Raízes lógicas e breadcrumbs paginados ocultam ancestrais não autorizados, inclusive seu ordinal físico. Favoritos são por pessoa e nunca concedem acesso; lixeira mostra apenas escopos administráveis.
+- Arquivos: bucket privado, staging com quotas/expiração, upload assinado sem overwrite, inspeção de tamanho/MIME/assinatura e finalização reautorizada/CAS. Download exige ACL atual e resposta sem cache; Storage impede emitir URL longa ou enumerar objetos. Teste HTTP real prova upload/download/revogação; SVG recusado. Remover capa desvincula; limpeza de órfãos com carência permanece M6.
+- Busca: título pt/en e acentos, ranking/cursor, recentes e isolamento. Benchmark inicialmente reprovou termo comum/recentes (~2,8/2,6 s p95); resolução de ACL por conjunto corrigiu o custo sem cache de autorização. Paridade com regra pontual testada para todos os papéis, restrições, concessão direta e ancestral excluído.
+- Medição reproduzível `pnpm test:perf`: 10 mil páginas, Windows/i5-14600KF/16 GiB, Postgres em Docker/loopback, cache aquecido, sem throttling, 20 amostras por cenário. p95 owner: Órbita 16,9 ms, Campo 23,9 ms, recentes 17,9 ms, 10 mil raízes 16,9 ms; membro com herança/restrições: 12,9/16,5/14,3 ms e filhos 17,0 ms. Todos abaixo de 500 ms; não mede latência de produção nem busca do corpo do M3.
+- Interface: cinco capturas sintéticas carregadas, claro desktop 1440 px e escuro móvel 390 px. Revisor pontuou navegação/foco móvel, centralização da busca, favorito ativo, upload pt-BR e opção ativa rolável; todos resolvidos. Regressão de overflow foi reproduzida RED, corrigida e confirmada; último verdict `ship` limitado aos ajustes listados. Axe automatizado da página populada sem violações; auditoria completa permanece M6.
+- Detector visual tentou executar uma vez e falhou pelo módulo ausente na instalação da skill, como no M1; nenhum falso passe. Piso revisado manualmente por revisor independente. DESIGN registra o artefato final; capturas e sidecar ficam ignorados.
+- Higiene/segurança: revisão independente do novo escopo de autorização e navegação sem achados materiais; 67 candidatos iniciais sem artefatos proibidos, duplicatas, resíduos de debug ou padrões fortes de segredo. Chave de servidor ausente dos chunks JS públicos inspecionados; nenhuma credencial, dado pessoal ou material recuperado da referência versionado. `.env.example` continua suficiente; sem configuração remota nova.
+- Preview pessoal: backup local ignorado dos schemas da aplicação e histórico de migrations antes da aplicação aditiva das duas migrations; nenhuma operação reset/purge. Digests dos IDs de contas, workspaces, membros e páginas iguais antes/depois; workspace pessoal confirmado presente. Servidor de produção local atualizado em `http://127.0.0.1:3000`.
+- Decisões: [018 isolamento](adr/ADR-018-isolated-testing.md), [019 previews](adr/ADR-019-page-access-previews.md), [020 arquivos](adr/ADR-020-private-page-files.md), [021 arraste](adr/ADR-021-maintained-drag-adapter.md), [022 metadados](adr/ADR-022-authorized-page-metadata.md), [023 consulta autorizada](adr/ADR-023-page-query-authorization.md). Commit local de páginas; sem push/deploy. Próximo marco M3 segue a autorização contínua, sem nova pausa.
 
 ## Evidências de fechamento do M1
 

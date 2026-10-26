@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "../features/pages/pages.css";
 
 :root {
   color-scheme: light;

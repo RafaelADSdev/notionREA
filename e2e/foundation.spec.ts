@@ -7,7 +7,7 @@ import type { Database } from "../src/lib/supabase/database.types";
 
 const api = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const secret = process.env.SUPABASE_SECRET_KEY;
-if (api !== "http://127.0.0.1:54321" || !secret)
+if (api !== "http://127.0.0.1:55321" || !secret)
   throw new Error("E2E accepts only the isolated local Supabase project");
 const admin = createClient<Database>(api, secret, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -36,16 +36,16 @@ async function mailLink(email: string) {
   let link: string | null = null;
   await expect
     .poll(async () => {
-      const response = await fetch("http://127.0.0.1:54324/api/v1/messages");
+      const response = await fetch("http://127.0.0.1:55324/api/v1/messages");
       const index = (await response.json()) as { messages: { ID: string; To: { Address: string }[] }[] };
       const message = index.messages.find((item) => item.To.some((recipient) => recipient.Address === email));
       if (!message) return false;
-      const detail = (await (await fetch(`http://127.0.0.1:54324/api/v1/message/${message.ID}`)).json()) as {
+      const detail = (await (await fetch(`http://127.0.0.1:55324/api/v1/message/${message.ID}`)).json()) as {
         HTML: string;
         Text: string;
       };
       const candidate = (detail.HTML || detail.Text).match(
-        /https?:\/\/127\.0\.0\.1:54321\/auth\/v1\/verify[^\s"<>]+/,
+        /https?:\/\/127\.0\.0\.1:55321\/auth\/v1\/verify[^\s"<>]+/,
       )?.[0];
       if (candidate) link = candidate.replaceAll("&amp;", "&");
       return Boolean(link);
@@ -165,6 +165,7 @@ test("an open private revision channel never substitutes for current content aut
       id: pageId,
       workspace_id: workspaceId,
       owner_id: owner.id,
+      created_by: owner.id,
       title: "Synthetic private page",
       position: "a",
     }),

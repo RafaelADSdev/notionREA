@@ -5,6 +5,7 @@
     "includes": [
       "**",
       "!**/.next",
+      "!**/.next-test",
       "!**/node_modules",
       "!**/.supabase",
       "!**/.impeccable",

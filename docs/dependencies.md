@@ -8,6 +8,7 @@ A implementação usa pacotes públicos fixados em `package.json` e `pnpm-lock.y
 | Backend cliente/SSR | Supabase JS e SSR | MIT |
 | Editor | TipTap core, StarterKit, PM, Collaboration, Table, UniqueID e y-tiptap | MIT |
 | CRDT | Yjs | MIT |
+| Arraste acessível | dnd-kit React e DOM | MIT |
 | Validação | Zod | MIT |
 | Estilos | Tailwind CSS | MIT |
 

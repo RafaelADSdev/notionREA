@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
+  distDir: process.env.NEXT_TEST_BUILD === "true" ? ".next-test" : ".next",
+  typescript: {
+    tsconfigPath:
+      process.env.NEXT_TEST_BUILD === "true" ? ".supabase/testing/tsconfig.json" : "tsconfig.json",
+  },
   poweredByHeader: false,
   logging: { incomingRequests: { ignore: [/\/auth\/callback/] }, fetches: { fullUrl: false } },
   experimental: { serverActions: { bodySizeLimit: "256kb" } },

@@ -5,6 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Brand, Icon } from "@/components/icon";
 import { signOut } from "@/features/auth/actions";
+import { PageSearch } from "@/features/pages/search";
+import { PageTree } from "@/features/pages/page-tree";
+import { CreatePageControl } from "@/features/pages/create-control";
 
 type Workspace = { id: string; name: string };
 export function WorkspaceShell({
@@ -26,8 +29,20 @@ export function WorkspaceShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const sidebar = useRef<HTMLDialogElement>(null);
   const menu = useRef<HTMLButtonElement>(null);
+  const main = useRef<HTMLElement>(null);
+  const focusDestination = useRef<string | null>(null);
+  const [searchNavigation, setSearchNavigation] = useState(0);
   const home = `/w/${workspace.id}`;
   const isMembers = path.endsWith("/members");
+  const label = isMembers
+    ? "Equipe"
+    : path.endsWith("/favorites")
+      ? "Favoritos"
+      : path.endsWith("/trash")
+        ? "Lixeira"
+        : path.includes("/p/")
+          ? "Páginas"
+          : "Página inicial";
   function closeMobile() {
     sidebar.current?.close();
     setMobileOpen(false);
@@ -36,6 +51,12 @@ export function WorkspaceShell({
   useEffect(() => {
     if (mobileOpen) sidebar.current?.showModal();
   }, [mobileOpen]);
+  useEffect(() => {
+    if (searchNavigation > 0 && focusDestination.current === path) {
+      main.current?.focus();
+      focusDestination.current = null;
+    }
+  }, [path, searchNavigation]);
   useEffect(() => {
     const viewport = window.matchMedia("(min-width: 801px)");
     const onResize = () => {
@@ -77,10 +98,19 @@ export function WorkspaceShell({
         </select>
       </div>
       <nav className="nav-list" aria-label="Principal">
+        <PageSearch
+          key={workspace.id}
+          workspaceId={workspace.id}
+          onNavigate={(destination) => {
+            focusDestination.current = destination;
+            closeMobile();
+            setSearchNavigation((value) => value + 1);
+          }}
+        />
         <Link
           className="nav-link"
           href={home}
-          aria-current={!isMembers ? "page" : undefined}
+          aria-current={path === home ? "page" : undefined}
           onClick={() => setMobileOpen(false)}
         >
           <Icon name="home" />
@@ -96,6 +126,39 @@ export function WorkspaceShell({
           Equipe
         </Link>
       </nav>
+      <nav className="nav-list" aria-label="Organização">
+        <Link
+          className="nav-link"
+          href={`${home}/favorites`}
+          aria-current={path.endsWith("/favorites") ? "page" : undefined}
+          onClick={() => setMobileOpen(false)}
+        >
+          <Icon name="star" />
+          Favoritos
+        </Link>
+        <Link
+          className="nav-link"
+          href={`${home}/trash`}
+          aria-current={path.endsWith("/trash") ? "page" : undefined}
+          onClick={() => setMobileOpen(false)}
+        >
+          <Icon name="trash" />
+          Lixeira
+        </Link>
+      </nav>
+      <section className="sidebar-section page-navigation" aria-label="Páginas do workspace">
+        <h2>Suas páginas</h2>
+        <CreatePageControl compact workspaceId={workspace.id} onNavigate={closeMobile} />
+        <PageTree
+          key={workspace.id}
+          workspaceId={workspace.id}
+          onNavigate={(destination) => {
+            focusDestination.current = destination;
+            closeMobile();
+            setSearchNavigation((value) => value + 1);
+          }}
+        />
+      </section>
       <div className="sidebar-section">
         <h2>Seus espaços</h2>
         <Link className="nav-link" href="/workspaces/new">
@@ -174,12 +237,12 @@ export function WorkspaceShell({
             <div className="breadcrumb">
               <Link href={home}>{workspace.name}</Link>
               <span aria-hidden="true">/</span>
-              <span>{isMembers ? "Equipe" : "Página inicial"}</span>
+              <span>{label}</span>
             </div>
           </div>
           <span className="workspace-label">Um espaço em construção conjunta.</span>
         </header>
-        <main id="main" className="workspace-main">
+        <main id="main" ref={main} tabIndex={-1} className="workspace-main">
           {children}
         </main>
       </div>

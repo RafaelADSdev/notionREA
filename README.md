@@ -11,12 +11,11 @@ Use Node 24 LTS (24.21.0 recomendado), pnpm 11.25.0 e Docker com engine Linux fu
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm supabase start
-pnpm supabase db reset --local
 pnpm local:env
 pnpm dev --hostname 127.0.0.1
 ```
 
-Abra [Bloco local](http://127.0.0.1:3000). Mensagens de confirmação e recuperação de senha ficam no [Mailpit local](http://127.0.0.1:54324); não são enviadas a destinatários externos. O reset apaga **somente os dados da stack local deste projeto** e reaplica as migrations. Não o execute para preservar dados locais que ainda precisa exportar.
+Abra [Bloco local](http://127.0.0.1:3000). Mensagens de confirmação e recuperação de senha ficam no [Mailpit local](http://127.0.0.1:54324); não são enviadas a destinatários externos. Preserve a stack pessoal: não execute reset nem remova seus volumes. Testes usam outro projeto, separado nas portas 55321–55324 e aplicação 3001.
 
 `pnpm local:env` cria `.env.local` a partir da stack local sem exibir chaves e recusa sobrescrever um arquivo existente. Para instalação, credenciais Google, ambientes e solução de problemas, consulte [docs/setup.md](docs/setup.md).
 
@@ -32,14 +31,18 @@ Abra [Bloco local](http://127.0.0.1:3000). Mensagens de confirmação e recupera
 | `pnpm test` | Testes unitários e provas de modelo |
 | `pnpm test:spike` | Provas focadas de colaboração |
 | `pnpm test:integration` | Integração local de durabilidade, concorrência e autorização |
+| `pnpm test:perf` | Orçamento de 500 ms p95 em busca/listagem com 10 mil páginas sintéticas |
 | `pnpm test:rls` | Testes de políticas e integridade no banco local |
 | `pnpm test:e2e` | Fluxos reais de navegador contra a stack local |
+| `pnpm test:env` | Preparar/iniciar a stack de testes isolada |
+| `pnpm test:db:reset` | Recriar somente o banco descartável de testes |
+| `pnpm test:build` | Build isolado para os testes de navegador |
 | `pnpm db:types` | Gerar tipos TypeScript a partir do banco local |
 | `pnpm db:types:check` | Falhar se os tipos versionados diferirem do banco |
 | `pnpm local:env` | Criar ambiente local ignorado pelo Git |
 | `pnpm supabase stop` | Parar a stack local |
 
-Antes do primeiro E2E, instale o Chromium de teste com `pnpm exec playwright install chromium`. Em Linux/CI, use `pnpm exec playwright install --with-deps chromium`. O E2E usa o build de produção: execute `pnpm build` antes dele. Os testes criam contas e conteúdo fictícios somente no projeto local; não aponte esses comandos para produção.
+Antes do primeiro E2E, instale o Chromium de teste com `pnpm exec playwright install chromium`. Em Linux/CI, use `pnpm exec playwright install --with-deps chromium`. Prepare com `pnpm test:env`, recrie somente o teste com `pnpm test:db:reset` e execute `pnpm test:build` antes de `pnpm test:e2e`. `.env.test.local` e `.next-test` mantêm teste e preview pessoais separados; as verificações recusam a stack pessoal ou um destino remoto.
 
 ## Arquitetura e contribuição
 

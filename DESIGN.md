@@ -1,6 +1,6 @@
 ---
 name: Bloco
-description: Sistema mineral/editorial para autenticação e trabalho em equipe.
+description: Sistema mineral/editorial para autenticação, organização de páginas e trabalho em equipe.
 colors:
   accent: "#344cb7"
   on-accent: "#ffffff"
@@ -95,6 +95,14 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.control}"
     padding: "12px 14px"
+  page-list-link:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    padding: "12px"
+  search-result-selected:
+    backgroundColor: "{colors.accent-soft}"
+    textColor: "{colors.accent}"
+    padding: "12px"
 ---
 
 # Sistema visual: Bloco
@@ -103,9 +111,9 @@ components:
 
 **Direção criativa: "Mineral/editorial"**
 
-O sistema entregue combina papel quente, tinta azulada e planos discretos para tarefas de autenticação, navegação de workspace e gestão de equipe. O ritmo editorial aparece na hierarquia tipográfica e no espaço entre grupos; os controles mantêm uma linguagem operacional de uso frequente.
+O sistema entregue combina papel quente, tinta azulada e planos discretos para autenticação, navegação de workspace, organização de páginas e gestão de equipe. O ritmo editorial aparece na hierarquia tipográfica e no espaço entre grupos; os controles mantêm uma linguagem operacional de uso frequente. Listas de páginas e subpáginas usam linhas contínuas e espaço aberto.
 
-O símbolo autoral de três lâminas e o ponto cobre identificam o produto. A tipografia do sistema e os temas claro/escuro preservam a direção aprovada em PRODUCT.md e na ADR-006. Este registro deriva de `src/app/globals.css`, dos componentes compartilhados e dos domínios de autenticação/workspaces; páginas e editor futuros não têm padrões estabelecidos aqui.
+O símbolo autoral de três lâminas e o ponto cobre identificam o produto. A tipografia do sistema e os temas claro/escuro preservam a direção aprovada em PRODUCT.md e na ADR-006. Este registro deriva de `src/app/globals.css`, `src/features/pages/pages.css`, dos componentes compartilhados e dos domínios de autenticação, workspaces e páginas. As capturas sintéticas do M2 em `.impeccable/review/m2/` confirmam início, página, busca e navegação nos tamanhos desktop e móvel. O editor de blocos do M3 ainda não estabelece padrões neste registro.
 
 **Características principais:**
 
@@ -113,6 +121,7 @@ O símbolo autoral de três lâminas e o ponto cobre identificam o produto. A ti
 - Índigo para ação, seleção e orientação; cobre restrito à marca.
 - Controles discretamente arredondados e foco explícito.
 - Símbolos SVG autorais com traço consistente.
+- Páginas em listas de linhas; busca sobreposta e árvore lateral compacta.
 
 ## Cores
 
@@ -121,7 +130,7 @@ A paleta associa neutros quentes no claro e petróleo no escuro aos mesmos papé
 ### Primárias
 
 - **Índigo de ação** (`accent`, `on-accent`): botões principais, links, ícones e destaque da navegação atual.
-- **Índigo diluído** (`accent-soft`): seleção de texto, navegação ativa, avatar, etiquetas e feedback informativo.
+- **Índigo diluído** (`accent-soft`): seleção de texto, navegação ativa, resultado de busca selecionado, favorito ativo, avatar, etiquetas e feedback informativo.
 - **Contrapartes escuras** (`accent-dark`, `on-accent-dark`, `accent-soft-dark`): mantêm a hierarquia no petróleo. O foco usa o índigo de ação no claro e `focus-dark` no escuro.
 
 ### Secundárias
@@ -146,7 +155,9 @@ A família operacional é Segoe UI, com alternativa do sistema e sans-serif. Nã
 
 Os títulos têm quebra equilibrada. O corpo usa entrelinha aberta; descrições principais limitam a largura de leitura (até 65ch), enquanto mensagens auxiliares são menores. Cabeçalhos de tabela e rótulos de contexto usam uma escala compacta (12px). Botões elevam o peso do rótulo (600).
 
-**Regra da Hierarquia de Trabalho.** Diferencie títulos, texto e ações por escala e peso da mesma família operacional; mantenha os rótulos visíveis junto aos campos.
+No M2, os títulos das listas usam escala de corpo com peso de seção. O nome editável da página usa a mesma família em escala maior, reduzida no móvel; é um campo de metadados, sem estabelecer tipografia para blocos. Árvore e breadcrumbs usam o papel auxiliar. Os títulos longos quebram nas listas e nos resultados; a árvore conserva uma linha com reticências.
+
+**Regra da Hierarquia de Trabalho.** Diferencie títulos, texto e ações por escala e peso da mesma família operacional; mantenha os rótulos visíveis junto aos campos. O campo de nome da página usa nome acessível associado.
 
 ## Composição
 
@@ -154,19 +165,21 @@ A estrutura usa navegação lateral recolhível (256px), barra de contexto com a
 
 A autenticação combina painel de marca e formulário limitado (392px). Abaixo do limite móvel (800px), o painel lateral desaparece, a marca acompanha o formulário e o conteúdo ocupa uma coluna. O workspace também passa a uma coluna; a navegação abre em diálogo lateral (até 300px ou 85vw). Tabelas preservam as colunas com rolagem horizontal. Formulários em linha quebram linha; suas ações principais passam à largura disponível no móvel.
 
-**Regra do Plano de Trabalho.** Organize conteúdo por títulos, respiro e divisórias; a lista de equipe usa linhas de tabela, sem transformar cada pessoa em um cartão.
+A página organiza breadcrumbs, capa opcional, ações de acesso/favorito, metadados, subpáginas e organização recolhível em sequência vertical. Favoritos reutilizam a lista de páginas. A lixeira mantém itens em fluxo vertical, separados por linha, com restauração junto ao item. A árvore recua por nível e limita o recuo em hierarquias profundas. A busca tem largura limitada e margem lateral preservada; seu conteúdo rola dentro da janela. No móvel, os cabeçalhos de seção e os controles de capa podem quebrar linha.
+
+**Regra do Plano de Trabalho.** Organize conteúdo por títulos, respiro e divisórias; páginas, subpáginas, lixeira e equipe mantêm listas contínuas no plano da página.
 
 ## Elevação e profundidade
 
-Os planos de trabalho são planos: diferença tonal e borda fina constroem profundidade. A sombra ambiente fica no controle flutuante de tema; a navegação móvel usa sombra lateral e fundo translúcido de sobreposição para indicar sobreposição. Os valores completos ficam nas extensões do sidecar, fora do esquema de tokens do frontmatter.
+Os planos de trabalho são planos: diferença tonal e borda fina constroem profundidade. A sombra ambiente fica no controle flutuante de tema e nos diálogos de busca/confirmar movimento; a navegação móvel usa sombra lateral e fundo translúcido de sobreposição. Os diálogos também escurecem o contexto atrás deles. Os valores completos ficam nas extensões do sidecar, fora do esquema de tokens do frontmatter.
 
-**Regra da Sobreposição Visível.** Reserve sombra para controles flutuantes e navegação sobreposta; mantenha tabelas e formulários no plano da página.
+**Regra da Sobreposição Visível.** Reserve sombra para controles flutuantes, diálogos e navegação sobreposta; mantenha tabelas, listas e formulários no plano da página.
 
 ## Formas
 
 Campos, botões, feedback e navegação compartilham cantos suavizados pelo token `control`. Bordas de um pixel definem limites sem relevo. Etiquetas de acesso são cápsulas; o avatar de inicial é um pequeno quadrado arredondado. Esses formatos têm funções distintas e não substituem a geometria dos controles.
 
-Os ícones são SVG de contorno, com espessura consistente (1.65), extremidades e junções arredondadas. As três lâminas reaparecem como assinatura em diferentes tamanhos; não são imagens ou glifos de uma fonte.
+Os ícones da interface são SVG de contorno, com espessura consistente (1.65), extremidades e junções arredondadas. As três lâminas reaparecem como assinatura em diferentes tamanhos. Um emoji escolhido como ícone de página pertence ao conteúdo do usuário e não define a iconografia da interface. A estrela do favorito passa de contorno a preenchimento quando ativa. Capas usam o arredondamento de controle e recorte central; são conteúdo opcional, sem imagem de marca padrão.
 
 ## Componentes
 
@@ -181,6 +194,22 @@ Campos e seletores usam superfície, linha e o mesmo arredondamento dos botões.
 ### Navegação
 
 Linhas de navegação têm alvo mínimo (44px). Ao passar o cursor, o fundo usa superfície; a página atual usa índigo diluído, texto de ação e peso elevado. O desktop permite recolher a lateral; o móvel abre diálogo modal, aceita Escape e devolve foco ao acionador ao fechar. Links auxiliares de autenticação têm alvo de altura mínima (44px).
+
+### Listas de páginas e árvore
+
+Páginas e subpáginas compartilham linhas com ícone, título e seta de destino. O link tem altura mínima (62px), texto de tinta e fundo de superfície no hover. O controle de movimento é separado do link; aceita teclado com Espaço, setas e Escape. Durante o arraste, o destino para colocar dentro de outra página aparece com borda tracejada e recebe índigo quando ativo. A árvore separa expansão e navegação, usa alvos mínimos (44px) e mostra seleção tonal no link atual. A paginação mantém ações textuais explícitas.
+
+### Busca rápida
+
+Um diálogo de superfície, borda fina e cantos suavizados contém campo de busca, resultados e instruções de teclado. A busca abre pelo acionador ou Ctrl/Meta K, coloca foco no campo e aceita setas/Enter; Escape fecha e restaura o foco. Resultados têm altura mínima (48px); hover e seleção compartilham o índigo diluído. Os símbolos não encolhem junto de títulos longos. Estado vazio, busca em andamento, falha e mais resultados aparecem como texto. O mesmo tratamento de diálogo serve à confirmação de movimentos que alteram acesso.
+
+### Metadados, capa e favorito
+
+O nome editável tem fundo transparente em repouso, linha inferior no hover e superfície no foco. Título e ícone têm salvamento explícito. A capa privada usa largura disponível, altura fluida e imagem central recortada; adicionar, trocar, remover e cancelar envio usam os botões existentes, com retorno textual junto aos controles. Favorito é um botão quadrado com estado pressionado, fundo de seleção e estrela preenchida; o nome acessível muda com o estado.
+
+### Organização e lixeira
+
+Mover página e enviar à lixeira ficam em seção recolhível com divisória. Ações de risco têm confirmação textual e checkbox; o botão de remoção usa texto de erro sobre fundo transparente. Cada item da lixeira associa título, data e formulário de restauração; o destino alternativo aparece quando o local original é desmarcado. Esses formulários reutilizam campos, botões e feedback existentes.
 
 ### Mensagens de retorno
 
@@ -199,11 +228,13 @@ As transições se limitam a cor e fundo dos botões e da navegação (140ms, ea
 - **Use** os papéis semânticos correspondentes ao tema, incluindo seleção de texto, cursor e foco.
 - **Preserve** rótulos, estados de pendência e mensagens de recuperação junto à ação.
 - **Use** SVG autoral consistente e divisórias finas para estruturar o trabalho.
+- **Reutilize** as listas por linhas para páginas e subpáginas, com controles de navegação e movimento separados.
 
 ### Restrições:
 
 - **Não importe** identidade, fontes, ícones ou estilos recuperados do produto de referência.
 - **Não trate** uma cor candidata da ADR como valor implementado; os tokens deste registro descrevem o CSS entregue.
 - **Não promova** medidas pontuais de uma superfície a uma regra global.
+- **Não infira** padrões do editor de blocos a partir dos campos de título e ícone do M2.
 
 Não canonizados: o título ampliado em fonte de sistema da lateral de autenticação e o espaçamento pontual entre letras da marca (-0.045em) não viram tokens reutilizáveis; o primeiro é uma recusa de acabamento para voz de destaque, e o segundo fica abaixo do piso de espaçamento entre letras. A família operacional aprovada permanece registrada para títulos de trabalho, corpo e controles.
