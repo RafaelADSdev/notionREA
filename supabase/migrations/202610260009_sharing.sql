@@ -377,4 +377,3 @@ grant execute on function public.get_page_sharing(uuid),public.list_page_sharing
   public.configure_page_sharing(uuid,bigint,boolean,text,jsonb,uuid,boolean,text),public.configure_page_publication(uuid,bigint,boolean,uuid[],boolean) to authenticated;
 grant execute on function public.read_page_publication(text,uuid) to anon,authenticated,service_role;
 grant execute on function public.verify_public_file(text,uuid) to service_role;
-
