@@ -220,6 +220,14 @@ function PageEditorBlock({
         }
       }}
     >
+      <button
+        type="button"
+        className="editor-block-comment"
+        aria-label={`Comentários do bloco ${index + 1}`}
+        onClick={() => controller.openComments(block.id)}
+      >
+        Comentários
+      </button>
       {editable && (
         <div className="editor-block-controls">
           <button

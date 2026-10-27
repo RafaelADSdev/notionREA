@@ -1,0 +1,100 @@
+.sharing-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 24px;
+  color: var(--ink);
+  background: var(--surface);
+}
+.sharing-dialog::backdrop {
+  background: #0008;
+}
+.sharing-dialog header,
+.sharing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sharing-dialog h2 {
+  font-size: 24px;
+}
+.sharing-dialog p {
+  margin-block: 12px;
+  color: var(--muted);
+}
+.sharing-form,
+.sharing-publication {
+  display: grid;
+  gap: 14px;
+  padding-block: 24px;
+}
+.sharing-publication {
+  border-top: 1px solid var(--line);
+}
+.sharing-dialog label {
+  display: grid;
+  gap: 6px;
+}
+.sharing-dialog label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 10px;
+}
+.sharing-dialog input:not([type="checkbox"]),
+.sharing-dialog select,
+.sharing-dialog button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  min-width: 0;
+}
+.sharing-dialog input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.sharing-dialog button[type="submit"],
+.sharing-actions button:first-child {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.sharing-grants {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sharing-grants li {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(100px, 140px) auto;
+  align-items: center;
+  gap: 10px;
+  padding-block: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.sharing-dialog .sharing-preview {
+  border: 1px solid var(--line);
+  padding: 12px;
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+@media (max-width: 560px) {
+  .sharing-dialog {
+    padding: 16px;
+  }
+  .sharing-grants li {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sharing-grants li span {
+    grid-column: 1 / -1;
+  }
+}

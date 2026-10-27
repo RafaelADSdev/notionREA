@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { uuidSchema } from "@/features/auth/validation";
+import { CommentsPanel } from "@/features/comments/comments-panel";
 import { CreateDatabaseControl } from "@/features/databases/create-control";
 import { DatabaseClient } from "@/features/databases/database-client";
 import { RecordProperties } from "@/features/databases/record-properties";
@@ -13,6 +14,7 @@ import { FavoriteButton, MovePageForm, PageMetadataForm, TrashPageForm } from "@
 import { breadcrumbSchema, pageDetailSchema, pageSummarySchema } from "@/features/pages/model/validation";
 import { PageList } from "@/features/pages/page-list";
 import { childrenOf } from "@/features/pages/queries";
+import { ShareControl } from "@/features/sharing/share-control";
 import { createClient, currentUser } from "@/lib/supabase/server";
 
 export default async function PageDocument({
@@ -58,6 +60,14 @@ export default async function PageDocument({
     .parse(databaseResult.data);
   const crumbs = z.array(breadcrumbSchema).parse(breadcrumbs.data);
   const last = children.items.at(-1);
+  let publicProperties: { id: string; name: string }[] = [];
+  if (database?.isContainer && access.data === "owner") {
+    const schema = await client.rpc("get_database_metadata", { p_database_id: database.databaseId });
+    if (schema.error) throw new Error("Não foi possível carregar os campos da base.");
+    publicProperties = z
+      .object({ properties: z.array(z.object({ id: z.uuid(), name: z.string().max(120) })).max(500) })
+      .parse(schema.data).properties;
+  }
   return (
     <div className="page-document">
       <BreadcrumbTrail
@@ -73,6 +83,7 @@ export default async function PageDocument({
         editable={editable}
       />
       <div className="page-toolbar">
+        {access.data === "owner" && <ShareControl pageId={pageId} properties={publicProperties} />}
         <span className="notice">
           {editable
             ? "Você pode editar esta página"
@@ -114,6 +125,7 @@ export default async function PageDocument({
         pageId={pageId}
         editable={editable}
       />
+      <CommentsPanel key={`comments:${pageId}`} pageId={pageId} />
       <section className="page-children">
         <div className="section-heading">
           <h2>Subpáginas</h2>

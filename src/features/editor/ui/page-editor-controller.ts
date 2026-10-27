@@ -9,6 +9,8 @@ import {
 } from "@tiptap/y-tiptap";
 import { useCallback, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { encodeCursor, type SharedCursor } from "@/features/collaboration/protocol";
+import type { CommentAnchor } from "@/features/comments/model";
 import type { EditorSession } from "../client/editor-session";
 import type { DocumentReferences } from "../client/reference-resolver";
 import { indentBlockSelection, orderedBlocks } from "../model/block-commands";
@@ -62,6 +64,7 @@ export function usePageEditorController(
   session: EditorSession,
   references: DocumentReferences,
   editable: boolean,
+  publishCursor?: (cursor: SharedCursor | null) => void,
 ) {
   const registry = useRef(new Map<string, Editor>());
   const pending = useRef<Focus | null>(null);
@@ -71,6 +74,26 @@ export function usePageEditorController(
   const [menu, setMenu] = useState<InlineMenu | null>(null);
   const [link, setLink] = useState<Editor | null>(null);
   const [error, setError] = useState("");
+  const [comment, setComment] = useState<{ blockId: string; anchor?: CommentAnchor } | null>(null);
+  const openComments = (blockId: string) => {
+    const editor = registry.current.get(blockId);
+    const binding = editor ? ySyncPluginKey.getState(editor.state)?.binding : undefined;
+    const relative =
+      binding && editor ? encodeCursor(blockId, getRelativeSelection(binding, editor.state)) : null;
+    const url = (value: string) => value.replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+    setComment({
+      blockId,
+      ...(relative
+        ? {
+            anchor: {
+              type: "relative",
+              start: url(relative.anchor),
+              end: url(relative.head),
+            } as CommentAnchor,
+          }
+        : {}),
+    });
+  };
   const setSelected = useCallback((ids: string[]) => {
     selectedRef.current = ids;
     setSelectedState(ids);
@@ -231,6 +254,8 @@ export function usePageEditorController(
     },
     onSelection(id, editor) {
       if (editor.view.hasFocus()) {
+        const binding = ySyncPluginKey.getState(editor.state)?.binding;
+        if (binding) publishCursor?.(encodeCursor(id, getRelativeSelection(binding, editor.state)));
         setActive((previous) =>
           previous?.id === id && previous.editor === editor ? previous : { id, editor },
         );
@@ -247,6 +272,10 @@ export function usePageEditorController(
       }
     },
     onChange(id, editor) {
+      if (editor.view.hasFocus()) {
+        const binding = ySyncPluginKey.getState(editor.state)?.binding;
+        if (binding) publishCursor?.(encodeCursor(id, getRelativeSelection(binding, editor.state)));
+      }
       ensureMentions(editor);
       if (pending.current?.id === id && editor.view.hasFocus()) {
         const binding = ySyncPluginKey.getState(editor.state)?.binding;
@@ -402,6 +431,9 @@ export function usePageEditorController(
     selectedRef,
     setSelected,
     setError,
+    comment,
+    setComment,
+    openComments,
     setMenu,
     setLink,
     selectFrame,

@@ -9,7 +9,10 @@ const config: NextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["yjs"],
   outputFileTracingIncludes: { "/api/documents/*": ["./.editor-runtime/validation-worker.mjs"] },
-  logging: { incomingRequests: { ignore: [/\/auth\/callback/] }, fetches: { fullUrl: false } },
+  logging: {
+    incomingRequests: { ignore: [/\/auth\/callback/, /^\/s\//, /^\/api\/public\//] },
+    fetches: { fullUrl: false },
+  },
   experimental: { serverActions: { bodySizeLimit: "256kb" } },
   async headers() {
     return [

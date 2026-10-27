@@ -3,6 +3,108 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      comment_threads: {
+        Row: {
+          anchor: Json | null;
+          author_id: string | null;
+          block_id: string | null;
+          created_at: string;
+          id: string;
+          page_id: string;
+          request_hash: string;
+          resolved: boolean;
+          revision: number;
+          updated_at: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          anchor?: Json | null;
+          author_id?: string | null;
+          block_id?: string | null;
+          created_at?: string;
+          id: string;
+          page_id: string;
+          request_hash: string;
+          resolved?: boolean;
+          revision?: number;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          anchor?: Json | null;
+          author_id?: string | null;
+          block_id?: string | null;
+          created_at?: string;
+          id?: string;
+          page_id?: string;
+          request_hash?: string;
+          resolved?: boolean;
+          revision?: number;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comment_threads_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
+      comments: {
+        Row: {
+          author_id: string | null;
+          body: string;
+          created_at: string;
+          deleted_at: string | null;
+          id: string;
+          page_id: string;
+          request_hash: string;
+          revision: number;
+          thread_id: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          author_id?: string | null;
+          body: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          id: string;
+          page_id: string;
+          request_hash: string;
+          revision?: number;
+          thread_id: string;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          deleted_at?: string | null;
+          id?: string;
+          page_id?: string;
+          request_hash?: string;
+          revision?: number;
+          thread_id?: string;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comments_thread_id_page_id_workspace_id_fkey";
+            columns: ["thread_id", "page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "comment_threads";
+            referencedColumns: ["id", "page_id", "workspace_id"];
+          },
+        ];
+      };
       database_cells: {
         Row: {
           database_id: string;
@@ -500,6 +602,48 @@ export type Database = {
           },
         ];
       };
+      page_publications: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          fields: string[];
+          page_id: string;
+          revision: number;
+          revoked_at: string | null;
+          token: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          fields?: string[];
+          page_id: string;
+          revision?: number;
+          revoked_at?: string | null;
+          token: string;
+          workspace_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          fields?: string[];
+          page_id?: string;
+          revision?: number;
+          revoked_at?: string | null;
+          token?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "page_publications_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
       page_search_chunks: {
         Row: {
           chunk_index: number;
@@ -556,6 +700,7 @@ export type Database = {
           title: string;
           updated_at: string;
           workspace_id: string;
+          workspace_role: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -580,6 +725,7 @@ export type Database = {
           title?: string;
           updated_at?: string;
           workspace_id: string;
+          workspace_role?: string | null;
         };
         Update: {
           cover_file_id?: string | null;
@@ -603,6 +749,7 @@ export type Database = {
           title?: string;
           updated_at?: string;
           workspace_id?: string;
+          workspace_role?: string | null;
         };
         Relationships: [
           {
@@ -625,6 +772,45 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "workspaces";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      sharing_audit: {
+        Row: {
+          action: string;
+          actor_id: string;
+          created_at: string;
+          id: string;
+          page_id: string;
+          result: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          action: string;
+          actor_id: string;
+          created_at?: string;
+          id?: string;
+          page_id: string;
+          result: string;
+          workspace_id: string;
+        };
+        Update: {
+          action?: string;
+          actor_id?: string;
+          created_at?: string;
+          id?: string;
+          page_id?: string;
+          result?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sharing_audit_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
           },
         ];
       };
@@ -737,6 +923,7 @@ export type Database = {
     };
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: string };
+      add_comment: { Args: { p_body: string; p_request_id?: string; p_thread_id: string }; Returns: string };
       add_database_record: {
         Args: { p_database_id: string; p_is_template?: boolean; p_request_id: string; p_title: string };
         Returns: Json;
@@ -772,6 +959,39 @@ export type Database = {
         Args: { p_expected_revision: number; p_page_id: string; p_snapshot: string };
         Returns: number;
       };
+      configure_page_publication: {
+        Args: {
+          p_enabled: boolean;
+          p_expected_revision: number;
+          p_fields?: string[];
+          p_page_id: string;
+          p_rotate?: boolean;
+        };
+        Returns: Json;
+      };
+      configure_page_sharing: {
+        Args: {
+          p_confirm?: boolean;
+          p_expected_revision: number;
+          p_grants?: Json;
+          p_owner_id?: string;
+          p_page_id: string;
+          p_preview_token?: string;
+          p_restricted?: boolean;
+          p_workspace_role?: string;
+        };
+        Returns: Json;
+      };
+      create_comment_thread: {
+        Args: {
+          p_anchor?: Json;
+          p_block_id?: string;
+          p_body: string;
+          p_page_id: string;
+          p_request_id?: string;
+        };
+        Returns: string;
+      };
       create_database: {
         Args: { p_parent_page_id: string; p_request_id: string; p_title: string; p_workspace_id: string };
         Returns: Json;
@@ -792,6 +1012,7 @@ export type Database = {
           label: string;
         }[];
       };
+      delete_comment: { Args: { p_comment_id: string; p_expected_revision: number }; Returns: undefined };
       delete_database_property: {
         Args: {
           p_confirm?: boolean;
@@ -809,6 +1030,10 @@ export type Database = {
       delete_database_view: {
         Args: { p_database_id: string; p_expected_revision: number; p_view_id: string };
         Returns: undefined;
+      };
+      edit_comment: {
+        Args: { p_body: string; p_comment_id: string; p_expected_revision: number };
+        Returns: number;
       };
       finalize_page_block_file: {
         Args: {
@@ -851,6 +1076,11 @@ export type Database = {
       get_page_database: { Args: { p_page_id: string }; Returns: Json };
       get_page_metadata: { Args: { p_page_id: string; p_workspace_id: string }; Returns: Json };
       get_page_role: { Args: { p_page_id: string }; Returns: string };
+      get_page_sharing: { Args: { p_page_id: string }; Returns: Json };
+      list_comment_threads: {
+        Args: { p_after_created_at?: string; p_after_id?: string; p_page_id: string };
+        Returns: Json;
+      };
       list_databases: {
         Args: { p_after_id?: string; p_query?: string; p_workspace_id: string };
         Returns: {
@@ -890,6 +1120,11 @@ export type Database = {
           revision: number;
           title: string;
         }[];
+      };
+      list_page_sharing_targets: { Args: { p_after_id?: string; p_page_id: string }; Returns: Json };
+      list_thread_comments: {
+        Args: { p_after_created_at?: string; p_after_id?: string; p_thread_id: string };
+        Returns: Json;
       };
       list_trash: {
         Args: { p_after_id?: string; p_query?: string; p_workspace_id: string };
@@ -996,10 +1231,16 @@ export type Database = {
         Args: { p_offset?: number; p_page_id: string; p_revision: number };
         Returns: string;
       };
+      read_page_publication: { Args: { p_after_id?: string; p_token: string }; Returns: Json };
       remove_member: { Args: { p_user_id: string; p_workspace_id: string }; Returns: undefined };
       remove_page: { Args: { p_expected_revision: number; p_page_id: string }; Returns: string };
+      renew_page_presence: { Args: { p_page_id: string; p_participant_id: string }; Returns: Json };
       reserve_document_validation: { Args: { p_actor_id: string; p_page_id: string }; Returns: undefined };
       reserve_page_file_validation: { Args: { p_actor_id: string; p_file_id: string }; Returns: undefined };
+      resolve_comment_thread: {
+        Args: { p_expected_revision: number; p_resolved: boolean; p_thread_id: string };
+        Returns: number;
+      };
       resolve_database_references: {
         Args: { p_database_id: string; p_record_ids: string[] };
         Returns: {
@@ -1052,6 +1293,7 @@ export type Database = {
         Args: { p_expected_revision: number; p_page_id: string; p_patch: Json };
         Returns: number;
       };
+      verify_public_file: { Args: { p_file_id: string; p_token: string }; Returns: boolean };
     };
     Enums: {
       [_ in never]: never;

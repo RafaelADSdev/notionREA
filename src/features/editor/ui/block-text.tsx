@@ -3,6 +3,7 @@
 import { Editor } from "@tiptap/core";
 import { useEffect, useRef } from "react";
 import * as Y from "yjs";
+import { remoteCursors } from "@/features/collaboration/remote-cursors";
 import { pageCollaboration } from "../model/page-collaboration";
 import type { StablePage } from "../model/stable-page";
 import { codeHighlightExtension } from "./code-highlight";
@@ -47,6 +48,7 @@ export function BlockText(props: BlockTextProps) {
       extensions: [
         ...createTextExtensions(mentionResolver ? { mentionResolver } : {}),
         pageCollaboration(page, blockId),
+        remoteCursors(page.document, blockId),
         codeHighlightExtension({
           isCode,
           language: () =>

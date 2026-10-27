@@ -1,0 +1,80 @@
+.collaborators {
+  margin-block: 12px 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.collaborators ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.collaborators li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.collaborator-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+[data-participant-color="copper"] .collaborator-dot {
+  background: var(--copper);
+}
+[data-participant-color="green"] .collaborator-dot {
+  background: var(--editor-green);
+}
+[data-participant-color="yellow"] .collaborator-dot {
+  background: var(--editor-yellow);
+}
+.collaborator-position {
+  color: var(--muted);
+}
+.remote-cursor,
+.remote-cursor-selection {
+  --participant-color: var(--accent);
+}
+:is(.remote-cursor, .remote-cursor-selection)[data-participant-color="copper"] {
+  --participant-color: var(--copper);
+}
+:is(.remote-cursor, .remote-cursor-selection)[data-participant-color="green"] {
+  --participant-color: var(--editor-green);
+}
+:is(.remote-cursor, .remote-cursor-selection)[data-participant-color="yellow"] {
+  --participant-color: var(--editor-yellow);
+}
+.remote-cursor-selection {
+  background: color-mix(in srgb, var(--participant-color) 18%, transparent);
+}
+.remote-cursor {
+  position: relative;
+  border-inline-start: 1px solid var(--participant-color);
+  pointer-events: none;
+}
+.remote-cursor-label {
+  position: absolute;
+  inset-inline-start: 0;
+  bottom: 100%;
+  max-width: 160px;
+  padding: 1px 5px;
+  border: 1px solid var(--participant-color);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--ink);
+  font:
+    11px / 1.6 "Segoe UI",
+    system-ui,
+    sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

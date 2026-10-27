@@ -99,7 +99,6 @@ export function useEditorNavigation(session: EditorSession, references: Document
     const focus = () => {
       void synchronize();
     };
-    const timer = setInterval(focus, 10000);
     window.addEventListener("beforeunload", beforeUnload);
     window.addEventListener("blur", blur);
     window.addEventListener("focus", focus);
@@ -109,7 +108,6 @@ export function useEditorNavigation(session: EditorSession, references: Document
     return () => {
       active = false;
       for (const replay of replays) clearTimeout(replay);
-      clearInterval(timer);
       window.removeEventListener("beforeunload", beforeUnload);
       window.removeEventListener("blur", blur);
       window.removeEventListener("focus", focus);

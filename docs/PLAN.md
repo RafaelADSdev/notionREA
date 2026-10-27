@@ -4,7 +4,7 @@ Atualização: 26/10/2026 (America/Sao_Paulo). Fonte única de progresso.
 
 ## Estado e próximo passo
 
-Checkpoint 1 e M1 aprovados; **M2 concluído (`318924d`), M3 concluído (`6bd936b`), M4 concluído e M5 em execução**. M2–M6 autorizados para continuidade sem pausas pelo pedido posterior “prossiga e pode ir implementando tudo”, reiterado nas instruções de continuidade. Manter testes, revisão, commits e relatórios por marco; só interromper por bloqueio real ou decisão cara de reverter. ADRs 001–010 e adaptação ADR-012 aceitas. Implementação consulta exclusivamente especificação e fontes públicas. Próximo passo: integrar presença/cursores, comentários e compartilhamento do M5; preservar dados pessoais locais. O usuário pediu priorizar entrega funcional em uma janela de 2–3 horas e reduzir execuções repetidas de testes, mantendo verificações focadas das alterações. Composição própria detalhada na [ADR-024](adr/ADR-024-editor-composition.md).
+Checkpoint 1 e M1 aprovados; **M2 concluído (`318924d`), M3 concluído (`6bd936b`), M4 concluído (`d609b73`), M5 concluído e M6 em execução**. M2–M6 autorizados para continuidade sem pausas pelo pedido posterior “prossiga e pode ir implementando tudo”, reiterado nas instruções de continuidade. Manter testes, revisão, commits e relatórios por marco; só interromper por bloqueio real ou decisão cara de reverter. ADRs 001–010 e adaptação ADR-012 aceitas. Implementação consulta exclusivamente especificação e fontes públicas. Próximo passo: integrar jobs de intercâmbio/cópias retomáveis, virtualização real de 5.000 blocos, i18n completo e preparo de deploy; depois atualizar a stack pessoal de forma aditiva. O usuário pediu priorizar entrega funcional em uma janela de 2–3 horas e reduzir execuções repetidas de testes, mantendo verificações focadas das alterações. Composição própria detalhada na [ADR-024](adr/ADR-024-editor-composition.md).
 
 **Dados locais a preservar:** após o M1, uma conta pessoal foi criada no Bloco local a pedido do usuário. A definição de senha foi entregue ao usuário na interface, sem fornecer senha ao agente. Esta stack deixou de conter somente fixtures descartáveis: não repetir `db reset`, purgar contas ou remover volumes contra ela. Provas futuras de banco vazio precisam de instância de teste isolada; preservar os dados locais existentes. Nenhum e-mail, senha ou token pessoal deve ser registrado no repositório.
 
@@ -35,8 +35,8 @@ Fechamento M1: build, lint, typecheck, 38 testes unitários/de modelo, 121 pgTAP
 | M2 Páginas        | Hierarquia, CRUD, ordem, capas, favoritos, lixeira e busca                 | Concluído |
 | M3 Editor         | Blocos, inline, arquivos, interações, autosave e base colaborativa         | Concluído             |
 | M4 Databases      | Propriedades, cinco views, filtros, agrupamento e templates                | Concluído             |
-| M5 Colaboração    | Edição simultânea, presença, comentários, ACL e publicação somente leitura | Em execução           |
-| M6 Acabamento     | Intercâmbio, idiomas, acessibilidade, performance e deploy                 | Planejado             |
+| M5 Colaboração    | Edição simultânea, presença, comentários, ACL e publicação somente leitura | Concluído             |
+| M6 Acabamento     | Intercâmbio, idiomas, acessibilidade, performance e deploy                 | Em execução           |
 
 ## Contratos, propostas e limites
 
@@ -138,11 +138,26 @@ Os itens abaixo são fatias internas, não marcos adicionais que dispensem os ga
 - Yjs externalizado no servidor Next elimina carregamento duplicado no runtime; confirmação final do fluxo sem o aviso anterior. Nenhum reset/purge ou migration M4 na stack pessoal neste fechamento; preview pessoal permanece M3 até atualização aditiva e novo build.
 - Limites: benchmark de 50 mil registros e virtualização pertencem à validação de escala M6; não foram medidos nesta rodada. Cópias grandes podem precisar de jobs retomáveis, ainda pendentes; credenciais externas continuam não configuradas. ADRs033/034 registram consulta e cópia de templates.
 
-## Execução do M5
+## Evidências de fechamento do M5
 
-- Cliente de revisão privada, catch-up, participantes e cursores relativos produzido em src/features/collaboration/, com nove testes focados próprios; ainda não integrado/liberado. Presence falha fechada sem lease/API, sem transmitir texto/e-mail/rótulos em tracks.
-- Migration008 de epochs/leases e comentários em construção, aguardando fim da janela SQL M4 para aplicação aditiva apenas no isolado; API/painel de comentários em execução. Compartilhamento e projeção pública são próximos.
-- Preferência do usuário: reduzir repetições e usar provas focadas a cada alteração; gates gerais concentrados no fechamento. M2–M6 continuam autorizados sem novas pausas. Não remover testes existentes, não rebaixar permissões/persistência para acelerar.
+- Editor integrado ao transporte de produção: canal privado só sinaliza revisão, catch-up fecha a janela de bootstrap e sondagem/foco/reconexão cobrem avisos ausentes. Documento continua validado, com ACK durável/CAS/IDs de operação; nenhuma substituição de snapshot resolve edição simultânea.
+- Cookies e refresh token permanecem HttpOnly. Um endpoint da mesma origem verifica usuário/JWT e retorna somente access token temporário, sem cache ou persistência no browser, para o callback de autenticação Realtime. O SDK instalado reobtém credenciais pelo callback; setAuth manual com o cliente de cookies inacessíveis era sobrescrito. Assinaturas agora aguardam autenticação explícita.
+- Presence usa canal por época e lease de trinta segundos; alterações de ACL/herança/membros invalidam leases, renovação a cada dez segundos. Rótulos vêm do roster autorizado, tracks são dicas visuais sem texto/e-mails; cursores são posições relativas com bytes/raízes/identidades delimitados. Deduplicação e throttle evitam amplificação por renovações.
+- Comentários de página/bloco com texto escapado até 8 KiB, paginação, resposta/edição/exclusão próprias, resolver/reabrir por capacidade, rascunhos preservados e salto ao intervalo relativo. Diálogo gerencia foco; bloco removido preserva conversa com âncora indisponível.
+- Compartilhamento por quatro papéis, fronteira de herança, papel padrão do workspace, transferência de owner e prévia/CAS por escopos. Auditoria guarda metadados administrativos, sem conteúdo ou tokens. Helpers de leitura/movimento/breadcrumbs consideram os mesmos papéis e não revelam ancestrais privados.
+- Publicação explícita, token opaco revogável/rotativo e campos selecionados da base. Corpo/ref/arquivo têm whitelist e autorização atual; registros, destinos e filhas precisam de publicação própria. Projeção não contém log Yjs, ACL, e-mails, presença ou comentários. Arquivos passam por verificação atual antes e depois do download e resposta sem cache.
+- Gates concentrados: build de produção isolado, tipos009 sem drift, lint dos domínios alterados, onze integrações e 767 pgTAP verdes. Banco vazio 001–009 reproduzido somente em bloco-test. A execução ampla de unitários teve 486 casos verdes; os três OAuth afetados pelo contexto Next da preparação M6 passaram na execução focada seguinte, sem remover testes. Novas provas M5 incluem sessão transitória, protocolo/lifetime, comentários e saída pública segura.
+- E2E real com duas sessões e visitante anônimo passou em 15,2 s na confirmação final: texto converge, cursores aparecem, comentário ancorado restaura seleção, viewer não comenta, usuário revogado não lê texto novo e publicação/arquivo são negados imediatamente após revogar. Prova antiga de colaboração foi preservada no arquivo original; novo fluxo fica em collaboration-product.spec.ts.
+- Medição local: cinco amostras com 50 ms adicionais por resposta HTTP de documento; ACK observado até texto da outra sessão teve p95/máximo 187 ms na confirmação final (rodada anterior 311 ms). Não mede input até ACK, população grande ou percentil de produção. Duas capturas sintéticas carregadas foram abertas, publicação clara desktop e compartilhamento escuro móvel; confirmação esperou article visível, sem usar fallback de streaming como prova visual.
+- Higiene: nenhum achado no scanner de 383 arquivos/81 links; chave privilegiada ausente dos 34 chunks públicos do build de teste. Types009 congelados no índice antes do próximo schema; sem push/deploy/recursos remotos. Dados pessoais ainda na stack M3, sem migrations006–009 aplicadas nela neste fechamento.
+- Limites M6: publicação atualmente recusa resposta acima de 1 MiB em vez de truncar; ampliar/paginar para a capacidade longa deve ser resolvido no acabamento. Localização de placeholders gerados no SQL precisa de sentinela semântica para não traduzir texto do usuário. ADR036 registra transporte, sessão e presença.
+
+## Execução do M6
+
+- Três fatias paralelas: intercâmbio/jobs em src/features/interchange/ e migration010; virtualização em model/virtualization.ts + ui/virtual-page-blocks.tsx (oito provas focadas, ainda não integrada); i18n em src/lib/i18n/, provider e domínios iniciais, ainda incompleto. Os arquivos M6 não pertencem ao commit M5.
+- M6 depende de integração real, não apenas modelos: import/export com prévia/relatório e jobs retomáveis, cópia durável de templates, catálogo pt-BR/en completo, tabela grande/5.000 TipTap reais e benchmark, acessibilidade e documentação/checklist Vercel/Supabase. Não marcar concluído antes desses itens e do gate final.
+- Dependency writer exclusivo do intercâmbio instalou yauzl3.4.0, marked18.1.1 e tipos; scripts negados e quarentena preservados, sem exceção para release recente. ADR035 reservada para jobs e ADR037 para idioma por request.
+- Preferences operacionais: testes focados por alteração e gates amplos só no fechamento; preservar todos os testes. Ambiente pessoal recebe somente migrations aditivas após backup/verificação. Sem push/deploy nem criação remota. Continuidade M2–M6 permanece autorizada sem pausas.
 
 ## Evidências de fechamento do M2
 

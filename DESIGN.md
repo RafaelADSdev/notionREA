@@ -297,6 +297,12 @@ A tabela separa pessoas por linhas finas, alinha ações com os dados e usa cabe
 
 As transições se limitam a cor e fundo dos botões e da navegação (140ms, ease-out), habilitadas apenas quando a preferência de movimento reduzido permite. Não existe animação de abertura estabelecida pelo CSS entregue.
 
+## Colaboração e publicação
+
+Presença usa uma faixa discreta junto ao estado de salvamento, com nomes e pontos na paleta do conteúdo. Cursores remotos são dicas visuais de posição; não substituem foco ou seleção local. Comentários ficam em conversas por linhas, com autoria, estado e ações textuais; o diálogo de bloco mantém foco e rascunho.
+
+O diálogo de compartilhamento organiza acesso, membros e publicação em seções verticais, com prévia antes de ampliar acesso. Controles têm alvo mínimo de 44 px e o conteúdo longo rola dentro do diálogo no móvel. A publicação de leitura usa a mesma tipografia e paleta, com coluna central, título amplo, conteúdo escapado e uma indicação simples da origem.
+
 ## Recomendações e restrições
 
 ### Recomendações:

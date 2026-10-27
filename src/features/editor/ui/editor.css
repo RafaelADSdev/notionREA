@@ -834,3 +834,45 @@ th.editor-table-cell {
     font-size: 12px;
   }
 }
+.editor-block-comment {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-start: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px 10px;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.editor-block:hover > .editor-block-comment,
+.editor-block:focus-within > .editor-block-comment,
+.editor-block-comment:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.block-comments-dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 24px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.block-comments-dialog::backdrop {
+  background: #0008;
+}
+@media (hover: none) {
+  .editor-block-comment {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+    margin-block-end: 6px;
+  }
+}
