@@ -2,6 +2,8 @@
 
 Workspace original de notas e bases de dados por blocos. Nome provisório; produto web com conteúdo colaborativo, organização hierárquica e identidade própria.
 
+[Publicação na Vercel](https://bloco-jet.vercel.app): tela de preparação enquanto o backend hospedado está adiado. O workspace completo depende do Supabase configurado; o estado e as pendências ficam no plano.
+
 Aplicação web com Next.js App Router, TypeScript estrito, Tailwind e Supabase. A fundação reúne autenticação, workspaces/membros, políticas de acesso e a base do conteúdo colaborativo. O escopo e o estado de cada marco estão exclusivamente em [docs/PLAN.md](docs/PLAN.md).
 
 ## Executar localmente
