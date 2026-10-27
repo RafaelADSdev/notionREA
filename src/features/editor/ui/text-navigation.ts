@@ -47,6 +47,7 @@ export function installTextNavigation(view: EditorView): () => void {
     // A following key may arrive before the queued selectionchange task.
     // Capture runs before ProseMirror's keydown handler flushes its observer.
     accept();
+    if (event.key === "Backspace" || event.key === "Delete") synchronizeNativeSelection(view);
     navigating = event.key === "Home" || event.key === "End";
   };
   view.dom.addEventListener("keydown", keydown, true);

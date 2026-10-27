@@ -1,26 +1,30 @@
 "use client";
+
 import { useState, useSyncExternalStore } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import type { EditorSession } from "../client/editor-session";
 import type { SaveState } from "../model/durable-document-provider";
 
-const labels: Record<SaveState, string> = {
-  loading: "Carregando",
-  dirty: "Alterações locais",
-  saving: "Enviando",
-  saved: "Salvo",
-  error: "Falha ao salvar. Seu rascunho continua nesta sessão.",
-  denied: "Acesso indisponível. Seu rascunho não foi descartado.",
-  unsupported: "Atualize o aplicativo para abrir esta versão do documento.",
-};
 export function PageEditorStatus({ session }: { session: EditorSession }) {
+  const t = useTranslations();
+
+  const labels: Record<SaveState, string> = {
+    loading: t("editor.loading"),
+    dirty: t("editor.localChanges"),
+    saving: t("editor.sending"),
+    saved: t("editor.saved"),
+    error: t("editor.saveFailedNotice"),
+    denied: t("editor.accessUnavailableNotice"),
+    unsupported: t("editor.updateRequiredNotice"),
+  };
   const status = useSyncExternalStore<SaveState>(session.subscribeStatus, session.getStatus, () => "loading");
   const [message, setMessage] = useState("");
   const copyDraft = async () => {
     try {
       await navigator.clipboard.writeText(session.draftText());
-      setMessage("Rascunho copiado.");
+      setMessage(t("editor.draftCopied"));
     } catch {
-      setMessage("Não foi possível copiar. Confira a permissão de cópia do navegador.");
+      setMessage(t("editor.copyPermissionFailed"));
     }
   };
   return (
@@ -28,12 +32,12 @@ export function PageEditorStatus({ session }: { session: EditorSession }) {
       <span>{labels[status]}</span>
       {status === "error" && (
         <button type="button" onClick={() => void session.provider.retry()}>
-          Tentar salvar novamente
+          {t("editor.retrySave")}
         </button>
       )}
       {session.provider.hasPendingChanges() && (
         <button type="button" onClick={() => void copyDraft()}>
-          Copiar rascunho
+          {t("editor.copyDraft")}
         </button>
       )}
       {message && <span role="status">{message}</span>}

@@ -23,7 +23,7 @@ export const leaseSchema = z.strictObject({
     .array(
       z.strictObject({
         participantId: z.uuid(),
-        label: z.string().min(1).max(120),
+        label: z.string().max(120),
         expiresAt: z.iso.datetime({ offset: true }),
       }),
     )

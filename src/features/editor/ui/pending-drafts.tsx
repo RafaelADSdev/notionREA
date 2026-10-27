@@ -1,6 +1,8 @@
 "use client";
+
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   getPendingDraftSession,
   getPendingDrafts,
@@ -10,17 +12,19 @@ import {
 import type { SaveState } from "../model/durable-document-provider";
 
 const empty: readonly PendingDraft[] = Object.freeze([]);
-const labels: Record<SaveState, string> = {
-  loading: "Carregando",
-  dirty: "Alterações locais",
-  saving: "Enviando",
-  saved: "Salvo",
-  error: "Falha ao salvar",
-  denied: "Acesso indisponível",
-  unsupported: "Atualização necessária",
-};
 
 export function PendingDrafts({ userId }: { userId: string }) {
+  const t = useTranslations();
+
+  const labels: Record<SaveState, string> = {
+    loading: t("editor.loading"),
+    dirty: t("editor.localChanges"),
+    saving: t("editor.sending"),
+    saved: t("editor.saved"),
+    error: t("editor.saveFailed"),
+    denied: t("editor.accessUnavailable"),
+    unsupported: t("editor.updateRequired"),
+  };
   const drafts = useSyncExternalStore(
     subscribePendingDrafts,
     () => getPendingDrafts(userId),
@@ -32,22 +36,22 @@ export function PendingDrafts({ userId }: { userId: string }) {
     if (!session) return;
     try {
       await navigator.clipboard.writeText(session.draftText());
-      setMessage("Rascunho copiado.");
+      setMessage(t("editor.draftCopied"));
     } catch {
-      setMessage("Não foi possível copiar. Volte ao rascunho e tente novamente.");
+      setMessage(t("editor.copyDraftFailed"));
     }
   }
   if (!drafts.length) return null;
   return (
-    <aside className="pending-drafts" aria-label="Rascunhos não confirmados">
-      <p>Há alterações não confirmadas em outra página.</p>
+    <aside className="pending-drafts" aria-label={t("editor.unconfirmedDrafts")}>
+      <p>{t("editor.otherDrafts")}</p>
       <ul>
         {drafts.map((draft) => (
           <li key={draft.pageId}>
             <span>{labels[draft.state]}</span>
-            <Link href={`/w/${draft.workspaceId}/p/${draft.pageId}`}>Voltar ao rascunho</Link>
+            <Link href={`/w/${draft.workspaceId}/p/${draft.pageId}`}>{t("editor.returnDraft")}</Link>
             <button type="button" onClick={() => void copy(draft.pageId)}>
-              Copiar rascunho
+              {t("editor.copyDraft")}
             </button>
           </li>
         ))}

@@ -11,6 +11,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { flushSync } from "react-dom";
+import { useTranslations } from "@/lib/i18n/client";
 import { addColumn, columnLayout, removeColumn, setColumnWeight } from "../model/column-layout";
 import type { StablePage } from "../model/stable-page";
 
@@ -30,6 +31,8 @@ function ColumnRemovalDialog({
   onConfirm: () => void;
   error: string;
 }) {
+  const t = useTranslations();
+
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
   const id = useId();
@@ -64,18 +67,15 @@ function ColumnRemovalDialog({
         }
       }}
     >
-      <h2 id={`${id}-title`}>Remover coluna?</h2>
-      <p>
-        Todos os blocos serão movidos para a coluna vizinha, mantendo seu conteúdo e ordem. Você poderá
-        desfazer esta ação.
-      </p>
+      <h2 id={`${id}-title`}>{t("editor.removeColumnQuestion")}</h2>
+      <p>{t("editor.removeColumnNotice")}</p>
       {error && <p role="alert">{error}</p>}
       <div className="editor-columns-dialog-actions">
         <button ref={cancel} type="button" onClick={onCancel}>
-          Cancelar
+          {t("common.cancel")}
         </button>
         <button type="button" onClick={onConfirm}>
-          Remover coluna
+          {t("editor.removeColumn")}
         </button>
       </div>
     </dialog>
@@ -83,6 +83,8 @@ function ColumnRemovalDialog({
 }
 
 export function ColumnsBlock({ page, groupId, editable, children }: ColumnsBlockProps) {
+  const t = useTranslations();
+
   const [error, setError] = useState("");
   const [removal, setRemoval] = useState<Removal | null>(null);
   const add = useRef<HTMLButtonElement>(null);
@@ -113,17 +115,16 @@ export function ColumnsBlock({ page, groupId, editable, children }: ColumnsBlock
     if (trigger?.isConnected) trigger.focus();
     else add.current?.focus();
   };
-  const fail = () =>
-    setError("Não foi possível alterar as colunas. Verifique a composição atual e tente novamente.");
+  const fail = () => setError(t("editor.columnsFailed"));
   return (
     <div className="editor-columns-block">
       {editable && (
         <fieldset className="editor-columns-controls">
-          <legend>Organizar colunas</legend>
+          <legend>{t("editor.organizeColumns")}</legend>
           {layout.columns.map((column, index) => (
             <div className="editor-columns-column-controls" key={column.id}>
               <label>
-                Coluna {index + 1}
+                {t("editor.column")} {index + 1}
                 <input
                   key={`${column.id}:${layout.weights[index]}`}
                   className="editor-column-weight"
@@ -131,7 +132,7 @@ export function ColumnsBlock({ page, groupId, editable, children }: ColumnsBlock
                   min="0.01"
                   max="100"
                   step="0.01"
-                  aria-label={`Largura relativa da coluna ${index + 1}`}
+                  aria-label={t("editor.columnWidthNumber", { number: index + 1 })}
                   defaultValue={layout.weights[index]}
                   disabled={layout.columns.length < 2 || layout.columns.length > 12}
                   onBlur={(event) => {
@@ -154,14 +155,14 @@ export function ColumnsBlock({ page, groupId, editable, children }: ColumnsBlock
               </label>
               <button
                 type="button"
-                aria-label={`Remover coluna ${index + 1}`}
+                aria-label={t("editor.removeColumnNumber", { number: index + 1 })}
                 disabled={layout.columns.length <= 2}
                 onClick={(event) => {
                   setError("");
                   setRemoval({ id: column.id, trigger: event.currentTarget });
                 }}
               >
-                Remover
+                {t("common.remove")}
               </button>
             </div>
           ))}
@@ -178,7 +179,7 @@ export function ColumnsBlock({ page, groupId, editable, children }: ColumnsBlock
               }
             }}
           >
-            Adicionar coluna
+            {t("editor.addColumn")}
           </button>
         </fieldset>
       )}

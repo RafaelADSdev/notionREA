@@ -3,6 +3,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { findPages } from "@/features/pages/search";
+import { useTranslations } from "@/lib/i18n/client";
 import { getCommandMenuPosition } from "./command-menu";
 import { useInlineMenuAria } from "./use-inline-menu-aria";
 
@@ -26,6 +27,8 @@ export function MentionMenu({
   onClose,
   anchorElement,
 }: MentionMenuProps) {
+  const t = useTranslations();
+
   const key = JSON.stringify([workspaceId, query]);
   const [results, setResults] = useState<Results>({ key: "", items: [], error: false });
   const items = results.key === key ? results.items : [];
@@ -49,14 +52,14 @@ export function MentionMenu({
   useEffect(() => {
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      void findPages(workspaceId, query, controller.signal)
+      void findPages(workspaceId, query, controller.signal, undefined, t.locale)
         .then((value) => {
           if (!controller.signal.aborted)
             setResults({
               key,
               items: boundedSearchItems.parse(value.items).map((item) => ({
                 id: item.id.toLowerCase(),
-                title: item.title || "Página sem título",
+                title: item.title || t("pages.untitled"),
                 icon: null,
               })),
               error: false,
@@ -70,7 +73,7 @@ export function MentionMenu({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [workspaceId, query, key]);
+  }, [workspaceId, query, key, t]);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -135,12 +138,12 @@ export function MentionMenu({
       className="editor-command-menu editor-mention-menu"
       style={{ left: position.left, top: position.top }}
     >
-      <div className="editor-command-menu-title">Referenciar página</div>
+      <div className="editor-command-menu-title">{t("editor.referencePage")}</div>
       <div
         id={listId}
         role="listbox"
         tabIndex={-1}
-        aria-label="Páginas disponíveis"
+        aria-label={t("editor.availablePages")}
         aria-busy={loading}
         aria-activedescendant={active ? `${listId}-${active.id}` : undefined}
       >
@@ -165,14 +168,14 @@ export function MentionMenu({
       {!items.length && (
         <p className="editor-command-empty" role="status">
           {loading
-            ? "Buscando páginas…"
+            ? t("editor.searchingPages")
             : results.error
-              ? "Não foi possível buscar páginas. Continue escrevendo ou pressione Esc."
-              : "Nenhuma página encontrada. Continue escrevendo ou pressione Esc."}
+              ? t("editor.mentionFailed")
+              : t("editor.mentionEmpty")}
         </p>
       )}
       <div className="editor-command-hint" aria-hidden="true">
-        ↑↓ navegar · Enter inserir · Esc fechar
+        {t("editor.commandKeys")}
       </div>
     </div>
   );

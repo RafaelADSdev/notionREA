@@ -7,6 +7,7 @@ import { DocumentReferences } from "../../src/features/editor/client/reference-r
 import { MentionMenu } from "../../src/features/editor/ui/mention-menu";
 import { createTextExtensions } from "../../src/features/editor/ui/text-extensions";
 import type { PageFileInfo } from "../../src/features/files/types";
+import { createTranslator } from "../../src/lib/i18n/core";
 
 const workspaceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const pageId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -155,11 +156,39 @@ describe("authorized document reference batches", () => {
     resolver.ensureMention("not-a-uuid");
     await vi.waitFor(() => expect(resolver.mentions.resolve(uuid)).not.toBeNull());
     expect(resolver.mentions.resolve(uuid.toUpperCase())).toEqual({
-      title: "Página sem título",
+      title: "",
       href: `/w/${workspaceId}/p/${uuid}`,
     });
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(resolver.mentions.resolve(id(2))).toBeNull();
+    let translate = createTranslator("en");
+    const listeners = new Set<() => void>();
+    const editor = new Editor({
+      element: document.createElement("div"),
+      injectCSS: false,
+      extensions: createTextExtensions({
+        mentionResolver: resolver.mentions,
+        locale: {
+          translate: () => translate,
+          subscribe: (listener) => {
+            listeners.add(listener);
+            return () => {
+              listeners.delete(listener);
+            };
+          },
+        },
+      }),
+    });
+    cleanups.push(() => editor.destroy());
+    editor.commands.insertContent({ type: "pageMention", attrs: { pageId: uuid } });
+    const canonical = editor.getJSON(),
+      selection = editor.state.selection;
+    expect(editor.view.dom.textContent).toBe("Untitled page");
+    translate = createTranslator("pt-BR");
+    for (const listener of listeners) listener();
+    expect(editor.view.dom.textContent).toBe("Página sem título");
+    expect(editor.getJSON()).toEqual(canonical);
+    expect(editor.state.selection.eq(selection)).toBe(true);
   });
 
   it("clears all labels and notifies source-page revocation on a 403", async () => {

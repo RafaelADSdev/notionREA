@@ -3,8 +3,11 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { signOut } from "@/features/auth/actions";
+import { useTranslations } from "@/lib/i18n/client";
 
 export function SafeSignOut({ userId }: { userId: string }) {
+  const t = useTranslations();
+
   const identity = useRef(userId);
   const active = useRef(true);
   const submitting = useRef(false);
@@ -29,13 +32,7 @@ export function SafeSignOut({ userId }: { userId: string }) {
       );
       await flushAllEditorSessions(actor);
       if (!current()) return;
-      if (
-        hasUnconfirmedEditorSessions(actor) &&
-        !window.confirm(
-          "Há alterações que ainda não foram salvas. Sair descartará esses rascunhos. Deseja sair mesmo assim?",
-        )
-      )
-        return;
+      if (hasUnconfirmedEditorSessions(actor) && !window.confirm(t("editor.signOutDrafts"))) return;
       if (current()) await signOut();
     } finally {
       submitting.current = false;
@@ -53,7 +50,7 @@ export function SafeSignOut({ userId }: { userId: string }) {
         aria-busy={pending}
       >
         <Icon name="exit" />
-        Sair
+        {t("auth.signOut")}
       </button>
     </form>
   );

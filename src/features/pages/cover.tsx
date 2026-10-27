@@ -1,9 +1,11 @@
 "use client";
-import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { prepareCoverUpload, finishCoverUpload, removeCover } from "@/features/files/actions";
+
+import { useRef, useState, useTransition } from "react";
+import { finishCoverUpload, prepareCoverUpload, removeCover } from "@/features/files/actions";
 import { uploadPreparedFile } from "@/features/files/upload";
 import { coverUploadSchema } from "@/features/files/validation";
+import { useTranslations } from "@/lib/i18n/client";
 
 export function PageCover({
   pageId,
@@ -16,6 +18,8 @@ export function PageCover({
   revision: number;
   editable: boolean;
 }) {
+  const t = useTranslations();
+
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const controller = useRef<AbortController | null>(null);
@@ -27,13 +31,13 @@ export function PageCover({
     const descriptor = { pageId, name: file.name, type: file.type, size: file.size };
     if (!coverUploadSchema.safeParse(descriptor).success) {
       setFailed(true);
-      setFeedback("Envie uma imagem PNG, JPEG, WebP ou GIF de até 25 MiB.");
+      setFeedback(t("pages.coverRequirements"));
       if (input.current) input.current.value = "";
       return;
     }
     startTransition(async () => {
       setFailed(false);
-      setFeedback("Enviando capa…");
+      setFeedback(t("pages.uploadingCover"));
       controller.current = new AbortController();
       setUploading(true);
       try {
@@ -43,24 +47,24 @@ export function PageCover({
           setFeedback(prepared.error);
           return;
         }
-        await uploadPreparedFile(prepared.value, file, controller.current.signal);
+        await uploadPreparedFile(prepared.value, file, controller.current.signal, t);
         setUploading(false);
         controller.current = null;
-        setFeedback("Confirmando capa…");
+        setFeedback(t("pages.confirmingCover"));
         const finalized = await finishCoverUpload(prepared.value.fileId, revision);
         if (!finalized.ok) {
           setFailed(true);
           setFeedback(finalized.error);
           return;
         }
-        setFeedback("Capa atualizada.");
+        setFeedback(t("pages.coverUpdated"));
         router.refresh();
       } catch (error) {
         setFailed(true);
         setFeedback(
           error instanceof DOMException && error.name === "AbortError"
-            ? "Envio cancelado. Você pode tentar novamente."
-            : "O envio não terminou. Confira sua conexão e tente novamente.",
+            ? t("files.uploadCancelled")
+            : t("files.uploadFailed"),
         );
       } finally {
         controller.current = null;
@@ -75,7 +79,7 @@ export function PageCover({
         <div
           className="page-cover"
           role="img"
-          aria-label="Capa da página"
+          aria-label={t("pages.cover")}
           style={{ backgroundImage: `url("/api/files/${coverFileId}")` }}
         />
       )}
@@ -87,12 +91,12 @@ export function PageCover({
             disabled={pending}
             onClick={() => input.current?.click()}
           >
-            {pending ? "Enviando capa…" : coverFileId ? "Trocar capa" : "Adicionar capa"}
+            {pending ? t("pages.uploadingCover") : coverFileId ? t("pages.changeCover") : t("pages.addCover")}
           </button>
           <input
             ref={input}
             hidden
-            aria-label="Capa da página"
+            aria-label={t("pages.cover")}
             tabIndex={-1}
             type="file"
             accept="image/png,image/jpeg,image/webp,image/gif"
@@ -104,7 +108,7 @@ export function PageCover({
           />
           {pending && uploading && (
             <button type="button" className="button quiet" onClick={() => controller.current?.abort()}>
-              Cancelar envio
+              {t("files.cancelUpload")}
             </button>
           )}
           {coverFileId && (
@@ -121,17 +125,17 @@ export function PageCover({
                       setFeedback(result.error);
                       return;
                     }
-                    setFeedback("Capa removida.");
+                    setFeedback(t("pages.coverRemoved"));
                     setFailed(false);
                     router.refresh();
                   } catch {
                     setFailed(true);
-                    setFeedback("Não foi possível remover. Recarregue a página e tente novamente.");
+                    setFeedback(t("pages.removeCoverFailed"));
                   }
                 })
               }
             >
-              Remover capa
+              {t("pages.removeCover")}
             </button>
           )}
           {feedback && (

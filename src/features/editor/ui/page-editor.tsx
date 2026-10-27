@@ -1,10 +1,11 @@
 "use client";
+
 import { Accessibility, defaultPreset } from "@dnd-kit/dom";
 import { DragDropProvider, type DragEndEvent } from "@dnd-kit/react";
 import { isSortable } from "@dnd-kit/react/sortable";
 import { TextSelection } from "@tiptap/pm/state";
 import { relativePositionToAbsolutePosition, ySyncPluginKey } from "@tiptap/y-tiptap";
-import { memo, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 import { Collaborators } from "@/features/collaboration/collaborators";
 import type { SharedCursor } from "@/features/collaboration/protocol";
@@ -12,6 +13,7 @@ import { decodePosition, validCursor } from "@/features/collaboration/protocol";
 import { usePageCollaboration } from "@/features/collaboration/use-page-collaboration";
 import { BlockCommentsDialog } from "@/features/comments/block-comments-dialog";
 import { commentAnchorSchema } from "@/features/comments/model";
+import { useTranslations } from "@/lib/i18n/client";
 import { clearOtherEditorSessions, type EditorSession, getEditorSession } from "../client/editor-session";
 import { DocumentReferences } from "../client/reference-resolver";
 import { useEditorNavigation } from "../client/use-editor-navigation";
@@ -25,23 +27,27 @@ import { usePageEditorClipboard } from "./page-editor-clipboard-events";
 import { usePageEditorController } from "./page-editor-controller";
 import { usePageEditorSelection } from "./page-editor-selection";
 import { PageEditorStatus } from "./page-editor-status";
+import { type VirtualBlockHandle, VirtualPageBlockProvider } from "./virtual-page-blocks";
 
-const plugins = [
-  ...defaultPreset.plugins.filter((plugin) => plugin !== Accessibility),
-  {
-    plugin: Accessibility,
-    options: {
-      screenReaderInstructions: {
-        draggable: "Para mover o bloco, pressione Espaço. Use as setas; Espaço confirma e Escape cancela.",
-      },
-      announcements: {
-        dragstart: () => "Bloco selecionado para mover.",
-        dragover: () => "Destino do bloco atualizado.",
-        dragend: (event: DragEndEvent) => (event.canceled ? "Movimento cancelado." : "Bloco movido."),
+function plugins(t: import("@/lib/i18n/core").Translator) {
+  return [
+    ...defaultPreset.plugins.filter((plugin) => plugin !== Accessibility),
+    {
+      plugin: Accessibility,
+      options: {
+        screenReaderInstructions: {
+          draggable: t("editor.dragBlockInstructions"),
+        },
+        announcements: {
+          dragstart: () => t("editor.dragSelected"),
+          dragover: () => t("editor.dragDestination"),
+          dragend: (event: DragEndEvent) =>
+            event.canceled ? t("common.moveCancelled") : t("editor.blockMoved"),
+        },
       },
     },
-  },
-];
+  ];
+}
 export type PageEditorProps = { userId: string; workspaceId: string; pageId: string; editable: boolean };
 class ReferenceLifetime {
   private generation = 0;
@@ -65,13 +71,22 @@ const PageEditorBody = memo(function PageEditorBody({
   editable: boolean;
   onCursor: (cursor: SharedCursor | null) => void;
 }) {
+  const t = useTranslations();
+  const dndPlugins = useMemo(() => plugins(t), [t]);
+
   useSyncExternalStore(session.subscribeStructure, session.getStructureVersion, () => 0);
   const state = session.getStatus();
   const canEdit = editable && session.isEditable() && !["loading", "denied", "unsupported"].includes(state);
   const controller = usePageEditorController(session, references, canEdit, onCursor);
   const root = useRef<HTMLDivElement>(null);
+  const virtualizer = useRef<VirtualBlockHandle>(null);
   const dragRestore = useRef<(() => void) | null>(null);
-  const selectionHandlers = usePageEditorSelection(controller, root, canEdit);
+  const selectionHandlers = usePageEditorSelection(
+    controller,
+    root,
+    canEdit,
+    () => virtualizer.current?.visibleIds() ?? orderedBlocks(session.page).map((block) => block.id),
+  );
   const clipboardHandlers = usePageEditorClipboard(controller, root, canEdit);
   const [draggingId, setDraggingId] = useState("");
   const clearBlockSelection = controller.setSelected;
@@ -79,7 +94,8 @@ const PageEditorBody = memo(function PageEditorBody({
   const closeComment = controller.setComment;
   const commentError = controller.setError;
   useEffect(() => {
-    const timers = new Set<ReturnType<typeof setTimeout>>();
+    let generation = 0;
+    let disposed = false;
     const reveal = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       const detail: unknown = event.detail;
@@ -94,27 +110,47 @@ const PageEditorBody = memo(function PageEditorBody({
       )
         return;
       const parsed = commentAnchorSchema.nullable().safeParse(detail.anchor);
-      if (!parsed.success || !parsed.data) return;
+      if (!parsed.success) return;
+      const blockId = detail.blockId;
       const base64 = (value: string) =>
         value.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - (value.length % 4)) % 4);
-      const cursor = validCursor({
-        blockId: detail.blockId,
-        anchor: base64(parsed.data.start),
-        head: base64(parsed.data.end),
-      });
-      if (!cursor) {
-        commentError("O trecho deste comentário não está disponível.");
+      const cursor = parsed.data
+        ? validCursor({
+            blockId,
+            anchor: base64(parsed.data.start),
+            head: base64(parsed.data.end),
+          })
+        : null;
+      if (parsed.data && !cursor) {
+        commentError(t("editor.commentPassageUnavailable"));
         return;
       }
+      const request = ++generation;
       flushSync(() => closeComment(null));
-      const timer = setTimeout(() => {
-        timers.delete(timer);
+      const restore = async () => {
+        const revealed = await virtualizer.current?.reveal(blockId);
+        if (disposed || request !== generation) return;
+        const frame = document.querySelector<HTMLElement>(`[data-editor-block="${blockId}"]`);
+        if (!revealed || !frame) {
+          commentError(t("editor.commentPassageUnavailable"));
+          return;
+        }
+        if (!cursor) {
+          frame.focus();
+          return;
+        }
+        // The newly mounted leaf registers its public binding during the commit.
+        // Yield only while that mount is pending; never read a stale editor instance.
+        for (let attempt = 0; attempt < 3 && !commentRegistry.current.has(blockId); attempt++) {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          if (disposed || request !== generation) return;
+        }
         const editor = commentRegistry.current.get(cursor.blockId);
         const binding = editor ? ySyncPluginKey.getState(editor.state)?.binding : undefined;
         const anchor = decodePosition(cursor.anchor, cursor.blockId),
           head = decodePosition(cursor.head, cursor.blockId);
         if (!editor || !binding || !anchor || !head) {
-          commentError("O trecho deste comentário não está disponível.");
+          commentError(t("editor.commentPassageUnavailable"));
           return;
         }
         const fragment = session.page.fragment(cursor.blockId);
@@ -128,22 +164,25 @@ const PageEditorBody = memo(function PageEditorBody({
           from >= editor.state.doc.content.size ||
           to >= editor.state.doc.content.size
         ) {
-          commentError("O trecho deste comentário não está disponível.");
+          commentError(t("editor.commentPassageUnavailable"));
           return;
         }
         editor.view.dispatch(
           editor.state.tr.setSelection(TextSelection.create(editor.state.doc, from, to)).scrollIntoView(),
         );
         editor.view.focus();
-      }, 0);
-      timers.add(timer);
+      };
+      void restore().catch(() => {
+        if (!disposed && request === generation) commentError(t("editor.commentPassageUnavailable"));
+      });
     };
     document.addEventListener("bloco:comment-anchor", reveal);
     return () => {
       document.removeEventListener("bloco:comment-anchor", reveal);
-      for (const timer of timers) clearTimeout(timer);
+      disposed = true;
+      generation++;
     };
-  }, [session, commentRegistry, closeComment, commentError]);
+  }, [session, commentRegistry, closeComment, commentError, t]);
   const hasBody =
     !["loading", "denied", "unsupported"].includes(state) &&
     session.document.getMap("meta").get("schemaVersion") === 1;
@@ -157,7 +196,7 @@ const PageEditorBody = memo(function PageEditorBody({
   if (state === "loading")
     return (
       <p className="editor-loading" role="status">
-        Carregando documento…
+        {t("editor.loadingDocument")}
       </p>
     );
   if (state === "denied" || state === "unsupported") return null;
@@ -167,9 +206,9 @@ const PageEditorBody = memo(function PageEditorBody({
     session.provider.revision === 0 &&
     session.document.getMap("meta").get("schemaVersion") === undefined
   )
-    return <p>Esta página ainda não tem conteúdo.</p>;
+    return <p>{t("editor.noContent")}</p>;
   if (session.document.getMap("meta").get("schemaVersion") !== 1)
-    return <p role="alert">Não foi possível carregar o documento. Tente novamente.</p>;
+    return <p role="alert">{t("editor.loadFailed")}</p>;
   const blocks = orderedBlocks(session.page);
   const anchorElement = controller.menu
     ? controller.registry.current.get(controller.menu.id)?.view.dom
@@ -204,121 +243,133 @@ const PageEditorBody = memo(function PageEditorBody({
     }
   };
   return (
-    <div
-      ref={root}
-      {...selectionHandlers}
-      {...clipboardHandlers}
-      onPointerDownCapture={(event) => {
-        if (event.target instanceof Element && event.target.closest("table")) controller.setSelected([]);
-      }}
-      className="editor-body"
-      onBlurCapture={(event) => {
-        if ((event.target as HTMLElement).isContentEditable) {
-          void session.provider.flush();
-          onCursor(null);
-        }
-      }}
+    <VirtualPageBlockProvider
+      ref={virtualizer}
+      blocks={blocks}
+      pageId={session.pageId}
+      pinnedIds={[...(controller.active ? [controller.active.id] : []), ...controller.selected]}
+      draggingId={draggingId || null}
     >
-      <div className="editor-actions">
-        <button
-          type="button"
-          disabled={!canEdit}
-          onClick={() =>
-            controller.preserveFocus(() => {
-              session.page.undo();
-            })
-          }
-        >
-          Desfazer
-        </button>
-        <button
-          type="button"
-          disabled={!canEdit}
-          onClick={() =>
-            controller.preserveFocus(() => {
-              session.page.redo();
-            })
-          }
-        >
-          Refazer
-        </button>
-        {!canEdit && <span>Somente leitura</span>}
-        <FormattingToolbar
-          editor={controller.active?.editor ?? null}
-          disabled={!canEdit || session.page.getBlock(controller.active?.id ?? "")?.type === "code"}
-          onLink={() => controller.setLink(controller.active?.editor ?? null)}
-        />
-      </div>
-      {controller.error && (
-        <p role="alert" className="editor-error">
-          {controller.error}
-        </p>
-      )}
-      <DragDropProvider
-        plugins={plugins}
-        onDragStart={(event) => {
-          const id = String(event.operation.source?.id ?? "");
-          dragRestore.current = controller.captureFocus(id);
-          setDraggingId(id);
+      <div
+        ref={root}
+        {...selectionHandlers}
+        {...clipboardHandlers}
+        onPointerDownCapture={(event) => {
+          if (event.target instanceof Element && event.target.closest("table")) controller.setSelected([]);
         }}
-        onDragEnd={finish}
+        className="editor-body"
+        onBlurCapture={(event) => {
+          if ((event.target as HTMLElement).isContentEditable) {
+            void session.provider.flush();
+            onCursor(null);
+          }
+        }}
       >
-        <PageEditorBlocks
-          blocks={blocks}
-          controller={controller}
-          editable={canEdit}
-          draggingId={draggingId}
-        />
-      </DragDropProvider>
-      {canEdit && (
-        <button
-          type="button"
-          className="editor-add-block"
-          onClick={() => {
-            const id = controller.run(() => insertBlock(session.page, { type: "paragraph", parentId: null }));
-            if (id) controller.focus(id);
+        <div className="editor-actions">
+          <button
+            type="button"
+            disabled={!canEdit}
+            onClick={() =>
+              controller.preserveFocus(() => {
+                session.page.undo();
+              })
+            }
+          >
+            {t("editor.undo")}
+          </button>
+          <button
+            type="button"
+            disabled={!canEdit}
+            onClick={() =>
+              controller.preserveFocus(() => {
+                session.page.redo();
+              })
+            }
+          >
+            {t("editor.redo")}
+          </button>
+          {!canEdit && <span>{t("common.readonly")}</span>}
+          <FormattingToolbar
+            editor={controller.active?.editor ?? null}
+            disabled={!canEdit || session.page.getBlock(controller.active?.id ?? "")?.type === "code"}
+            onLink={() => controller.setLink(controller.active?.editor ?? null)}
+          />
+        </div>
+        {controller.error && (
+          <p role="alert" className="editor-error">
+            {controller.error}
+          </p>
+        )}
+        <DragDropProvider
+          plugins={dndPlugins}
+          onDragStart={(event) => {
+            const id = String(event.operation.source?.id ?? "");
+            dragRestore.current = controller.captureFocus(id);
+            setDraggingId(id);
           }}
+          onDragEnd={finish}
         >
-          Adicionar bloco de texto
-        </button>
-      )}
-      {controller.menu?.kind === "slash" && canEdit && (
-        <CommandMenu
-          query={controller.menu.query}
-          anchor={controller.menu.anchor}
-          {...(anchorElement ? { anchorElement } : {})}
-          onChoose={controller.choose}
-          onClose={() => controller.setMenu(null)}
+          <PageEditorBlocks
+            blocks={blocks}
+            controller={controller}
+            editable={canEdit}
+            draggingId={draggingId}
+          />
+        </DragDropProvider>
+        {canEdit && (
+          <button
+            type="button"
+            className="editor-add-block"
+            onClick={() => {
+              const id = controller.run(() =>
+                insertBlock(session.page, { type: "paragraph", parentId: null }),
+              );
+              if (id) controller.focus(id);
+            }}
+          >
+            {t("editor.addTextBlock")}
+          </button>
+        )}
+        {controller.menu?.kind === "slash" && canEdit && (
+          <CommandMenu
+            query={controller.menu.query}
+            anchor={controller.menu.anchor}
+            {...(anchorElement ? { anchorElement } : {})}
+            onChoose={controller.choose}
+            onClose={() => controller.setMenu(null)}
+          />
+        )}
+        {controller.menu?.kind === "mention" && canEdit && (
+          <MentionMenu
+            workspaceId={session.workspaceId}
+            query={controller.menu.query}
+            anchor={controller.menu.anchor}
+            {...(anchorElement ? { anchorElement } : {})}
+            onChoose={controller.chooseMention}
+            onClose={() => controller.setMenu(null)}
+          />
+        )}
+        <LinkDialog
+          editor={controller.link}
+          open={Boolean(controller.link && canEdit)}
+          onClose={() => controller.setLink(null)}
         />
-      )}
-      {controller.menu?.kind === "mention" && canEdit && (
-        <MentionMenu
-          workspaceId={session.workspaceId}
-          query={controller.menu.query}
-          anchor={controller.menu.anchor}
-          {...(anchorElement ? { anchorElement } : {})}
-          onChoose={controller.chooseMention}
-          onClose={() => controller.setMenu(null)}
-        />
-      )}
-      <LinkDialog
-        editor={controller.link}
-        open={Boolean(controller.link && canEdit)}
-        onClose={() => controller.setLink(null)}
-      />
-      {controller.comment && (
-        <BlockCommentsDialog
-          pageId={session.pageId}
-          blockId={controller.comment.blockId}
-          {...(controller.comment.anchor ? { anchor: controller.comment.anchor } : {})}
-          onClose={() => controller.setComment(null)}
-        />
-      )}
-    </div>
+        {controller.comment && (
+          <BlockCommentsDialog
+            pageId={session.pageId}
+            blockId={controller.comment.blockId}
+            {...(controller.comment.anchor ? { anchor: controller.comment.anchor } : {})}
+            onClose={() => controller.setComment(null)}
+          />
+        )}
+      </div>
+    </VirtualPageBlockProvider>
   );
 });
 
 export function PageEditor(props: PageEditorProps) {
+  const t = useTranslations();
+
   const [session] = useState(() => getEditorSession(props));
   const [references] = useState(
     () =>
@@ -344,7 +395,7 @@ export function PageEditor(props: PageEditorProps) {
   useEditorNavigation(session, references);
   const collaboration = usePageCollaboration(session, props.editable);
   return (
-    <section className="page-editor" aria-label="Conteúdo da página">
+    <section className="page-editor" aria-label={t("editor.pageContent")}>
       <PageEditorStatus session={session} />
       <Collaborators collaboration={collaboration} />
       <PageEditorBody

@@ -3,10 +3,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getEnvironment } from "@/lib/env";
 import { PayloadLimitError } from "@/lib/http";
+import { getTranslations } from "@/lib/i18n/server";
 import { DatabaseRequestError } from "./validation";
 
 export const databaseHeaders = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
-export function databaseFailure(error: unknown) {
+export async function databaseFailure(error: unknown) {
+  const t = await getTranslations();
   const status =
     error instanceof DatabaseRequestError
       ? error.status
@@ -17,14 +19,14 @@ export function databaseFailure(error: unknown) {
           : 503;
   const message =
     status === 409
-      ? "Os dados mudaram. Atualize a consulta e confira a alteração antes de tentar novamente."
+      ? t("database.dataChanged")
       : status === 413
-        ? "Esta alteração excede o tamanho permitido."
+        ? t("database.changeTooLarge")
         : status === 403 || status === 404
-          ? "Base ou registro indisponível para esta conta."
+          ? t("database.recordUnavailable")
           : status === 400
-            ? "Confira os dados da consulta ou alteração."
-            : "Não foi possível concluir. Tente novamente.";
+            ? t("database.checkQueryData")
+            : t("errors.tryAgain");
   return NextResponse.json({ ok: false, error: message }, { status, headers: databaseHeaders });
 }
 export function sameDatabaseOrigin(request: Request): boolean {

@@ -1,7 +1,9 @@
 "use client";
-import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+
+import { useState, useTransition } from "react";
 import { Icon } from "@/components/icon";
+import { useTranslations } from "@/lib/i18n/client";
 import { createPage } from "./actions";
 
 export function CreatePageControl({
@@ -15,6 +17,8 @@ export function CreatePageControl({
   compact?: boolean;
   onNavigate?: () => void;
 }) {
+  const t = useTranslations();
+
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
@@ -23,7 +27,7 @@ export function CreatePageControl({
       <button
         type="button"
         className={compact ? "nav-link" : "button"}
-        aria-label={compact ? "Criar página no workspace" : undefined}
+        aria-label={compact ? t("pages.createInWorkspace") : undefined}
         disabled={pending}
         onClick={() =>
           startTransition(async () => {
@@ -41,7 +45,7 @@ export function CreatePageControl({
         }
       >
         <Icon name="plus" />
-        {pending ? "Criando…" : parentId ? "Adicionar subpágina" : "Nova página"}
+        {pending ? t("common.creating") : parentId ? t("pages.addSubpage") : t("pages.newPage")}
       </button>
       {error && (
         <p role="alert" className="notice">

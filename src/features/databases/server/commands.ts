@@ -1,9 +1,10 @@
+import { getTranslations } from "@/lib/i18n/server";
 import "server-only";
 import { z } from "zod";
-import { type PropertyValue, parsePropertyWrite, parseView, propertyDefinitionSchema } from "../model";
+import { planTemplateCopy } from "@/features/interchange/server/template-copy";
+import { parsePropertyWrite, parseView, propertyDefinitionSchema } from "../model";
 import { uuidSchema } from "../model/properties";
-import { cloneTemplateBody } from "../template-content";
-import type { DatabaseCommandResult, DatabaseProperty } from "../types";
+import type { DatabaseCommandResult } from "../types";
 import { databaseClient } from "./client";
 import { databaseMetadata } from "./queries";
 import {
@@ -30,8 +31,6 @@ const resultSchema = z.strictObject({
   dependentViews: z.array(uuidSchema).optional(),
   deleted: z.boolean().optional(),
 });
-const cellSchema = z.strictObject({ property_id: uuidSchema, value: z.unknown(), revision: revisionSchema });
-type Client = Awaited<ReturnType<typeof databaseClient>>;
 function mutationResult(input: unknown): DatabaseCommandResult & { deleted?: boolean } {
   const value = parseServer(() => resultSchema.parse(input));
   return {
@@ -45,44 +44,6 @@ function mutationResult(input: unknown): DatabaseCommandResult & { deleted?: boo
     ...(value.dependentViews !== undefined ? { dependentViews: value.dependentViews } : {}),
     ...(value.deleted !== undefined ? { deleted: value.deleted } : {}),
   };
-}
-
-/** Stored defaults remain separate cells; no JSON copy of an entire database. */
-async function templateDefaults(
-  client: Client,
-  databaseId: string,
-  pageId: string,
-  properties: readonly DatabaseProperty[],
-): Promise<{ id: string; value: PropertyValue }[]> {
-  const record = await client
-    .from("database_records")
-    .select("page_id,is_template")
-    .eq("database_id", databaseId)
-    .eq("page_id", pageId)
-    .maybeSingle();
-  checkDatabaseError(record.error);
-  if (!record.data?.is_template) throw new DatabaseRequestError(403);
-  const defaults: { id: string; value: PropertyValue }[] = [];
-  let bytes = 0;
-  for (let offset = 0; ; offset += 500) {
-    const result = await client
-      .from("database_cells")
-      .select("property_id,value,revision")
-      .eq("database_id", databaseId)
-      .eq("page_id", pageId)
-      .order("property_id")
-      .range(offset, offset + 499);
-    checkDatabaseError(result.error);
-    const rows = parseServer(() => z.array(cellSchema).max(500).parse(result.data));
-    for (const row of rows) {
-      const property = properties.find((property) => property.id === row.property_id);
-      if (!property) throw new DatabaseRequestError(409);
-      bytes += Buffer.byteLength(JSON.stringify(row.value), "utf8");
-      if (bytes > 262144) throw new DatabaseRequestError(503);
-      defaults.push({ id: property.id, value: parseServer(() => parsePropertyWrite(property, row.value)) });
-    }
-    if (rows.length < 500) return defaults;
-  }
 }
 
 export async function createDatabase(input: unknown) {
@@ -111,6 +72,8 @@ export async function commandDatabase(
   actorId: string,
   operationId = crypto.randomUUID(),
 ): Promise<DatabaseCommandResult> {
+  const t = await getTranslations();
+
   const id = uuidSchema.parse(databaseId);
   uuidSchema.parse(actorId);
   const requestId = uuidSchema.parse(operationId);
@@ -251,7 +214,6 @@ export async function commandDatabase(
             : undefined;
       if ((command.action === "createRecord" ? command.templateId : command.pageId) && !source)
         throw new DatabaseRequestError(403);
-      const defaults = source ? await templateDefaults(client, id, source.pageId, metadata.properties) : [];
       const result = await client.rpc("add_database_record", {
         p_database_id: id,
         p_title: command.title,
@@ -261,18 +223,30 @@ export async function commandDatabase(
       checkDatabaseError(result.error);
       const created = parseServer(() => createdSchema.parse(result.data));
       try {
-        for (const cell of defaults) {
-          const saved = await client.rpc("put_database_cell", {
-            p_database_id: id,
-            p_page_id: created.pageId,
-            p_property_id: cell.id,
-            p_value: toJson(cell.value),
-            p_expected_revision: 0,
-          });
-          checkDatabaseError(saved.error);
-        }
-        if (source) await cloneTemplateBody(source.pageId, created.pageId, actorId);
+        const copy = source
+          ? await planTemplateCopy({
+              databaseId: id,
+              sourcePageId: source.pageId,
+              targetPageId: created.pageId,
+              actorId,
+              operationId: requestId,
+            })
+          : null;
         if (command.action === "template") {
+          const existing = await client
+            .from("database_templates")
+            .select("id,revision")
+            .eq("database_id", id)
+            .eq("page_id", created.pageId)
+            .maybeSingle();
+          checkDatabaseError(existing.error);
+          if (existing.data)
+            return {
+              ok: copy ? copy.job.state === "complete" : true,
+              id: existing.data.id,
+              pageId: created.pageId,
+              ...(copy ? { jobId: copy.jobId } : {}),
+            };
           const saved = await client.rpc("put_database_template", {
             p_database_id: id,
             p_id: null,
@@ -281,15 +255,23 @@ export async function commandDatabase(
             p_expected_revision: 0,
           });
           checkDatabaseError(saved.error);
-          return { ...mutationResult(saved.data), pageId: created.pageId };
+          return {
+            ...mutationResult(saved.data),
+            ok: copy ? copy.job.state === "complete" : true,
+            pageId: created.pageId,
+            ...(copy ? { jobId: copy.jobId } : {}),
+          };
         }
-        return { ok: true, ...created };
+        return {
+          ok: copy ? copy.job.state === "complete" : true,
+          ...created,
+          ...(copy ? { jobId: copy.jobId } : {}),
+        };
       } catch {
         return {
           ok: false,
           ...created,
-          error:
-            "A página foi criada, mas não foi possível confirmar a aplicação completa do template. Abra a página criada e confira o conteúdo; não repita a criação.",
+          error: t("database.templatePartialNotice"),
         };
       }
     }

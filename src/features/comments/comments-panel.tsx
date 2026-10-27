@@ -1,5 +1,7 @@
 "use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { commentAccessLost, commentErrorMessage, fetchThreads, postThread } from "./client";
 import { CommentComposer } from "./comment-composer";
 import { CommentThreadView } from "./comment-thread";
@@ -15,6 +17,8 @@ export function CommentsPanel({
   blockId?: string;
   anchor?: CommentAnchor;
 }) {
+  const t = useTranslations();
+
   const [threads, setThreads] = useState<CommentThread[]>([]),
     [cursor, setCursor] = useState<string | null>(null);
   const [actor, setActor] = useState(""),
@@ -36,8 +40,8 @@ export function CommentsPanel({
     setAvailable(false);
     setRole("viewer");
     setLoading(false);
-    setError("O acesso aos comentários mudou. Seu rascunho foi preservado.");
-  }, []);
+    setError(t("comments.accessChanged"));
+  }, [t]);
   const load = useCallback(
     async (after?: string | null, signal?: AbortSignal, replace = false) => {
       const currentSequence = ++sequence.current;
@@ -57,14 +61,14 @@ export function CommentsPanel({
         setAvailable(true);
       } catch (error) {
         if (!signal?.aborted) {
-          setError(commentErrorMessage(error));
+          setError(commentErrorMessage(error, t));
           if (commentAccessLost(error)) denied();
         }
       } finally {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [pageId, denied],
+    [pageId, denied, t],
   );
   useEffect(() => {
     const controller = new AbortController();
@@ -77,24 +81,22 @@ export function CommentsPanel({
   const visible = blockId ? threads.filter((thread) => thread.blockId === blockId) : threads;
   const canComment = available && role !== "viewer";
   return (
-    <section className="comments-panel" aria-label="Comentários" aria-busy={loading}>
+    <section className="comments-panel" aria-label={t("comments.title")} aria-busy={loading}>
       <header>
         <div>
-          <p className="comments-eyebrow">Conversa</p>
-          <h2>{blockId ? "Comentários do bloco" : "Comentários"}</h2>
+          <p className="comments-eyebrow">{t("comments.conversation")}</p>
+          <h2>{blockId ? t("comments.blockComments") : t("comments.title")}</h2>
         </div>
         <button type="button" disabled={loading} onClick={() => void refresh()}>
-          Atualizar comentários
+          {t("comments.refresh")}
         </button>
       </header>
       {blockId && (
         <p className="comment-context">
-          {anchor
-            ? "Seu comentário será vinculado ao trecho selecionado."
-            : "Seu comentário será vinculado ao bloco selecionado."}
+          {anchor ? t("comments.selectionNotice") : t("comments.blockNotice")}
         </p>
       )}
-      {loading && !threads.length && <p role="status">Carregando comentários…</p>}
+      {loading && !threads.length && <p role="status">{t("comments.loading")}</p>}
       {available && (
         <ol className="comment-threads">
           {visible.map((thread) => (
@@ -111,18 +113,16 @@ export function CommentsPanel({
         </ol>
       )}
       {available && !visible.length && !loading && (
-        <p>
-          {blockId ? "Nenhuma conversa exibida para este bloco." : "Ainda não há conversas nesta página."}
-        </p>
+        <p>{blockId ? t("comments.noBlockThreads") : t("comments.noPageThreads")}</p>
       )}
       {cursor && available && (
         <button type="button" disabled={loading} onClick={() => void load(cursor)}>
-          Mais conversas
+          {t("comments.moreThreads")}
         </button>
       )}
       <CommentComposer
-        label={blockId ? "Novo comentário no bloco" : "Novo comentário na página"}
-        submitLabel="Enviar comentário"
+        label={blockId ? t("comments.newBlock") : t("comments.newPage")}
+        submitLabel={t("comments.sendComment")}
         requestScope={`${pageId}:${blockId ?? ""}:${JSON.stringify(anchor ?? null)}`}
         disabled={!canComment}
         onSend={async (body, requestId) => {
@@ -133,11 +133,11 @@ export function CommentsPanel({
               ...(blockId ? { blockId } : {}),
               ...(anchor ? { anchor } : {}),
             });
-            setNotice("Comentário enviado.");
+            setNotice(t("comments.sent"));
             await refresh();
             return true;
           } catch (error) {
-            setError(commentErrorMessage(error));
+            setError(commentErrorMessage(error, t));
             if (commentAccessLost(error)) denied();
             return false;
           }
@@ -146,16 +146,12 @@ export function CommentsPanel({
       {!canComment && Object.values(drafts).some(Boolean) && (
         <div className="comment-preserved-drafts">
           <label>
-            Meus rascunhos preservados
+            {t("comments.preservedDrafts")}
             <textarea readOnly value={Object.values(drafts).filter(Boolean).join("\n\n")} />
           </label>
         </div>
       )}
-      {available && role === "viewer" && (
-        <p className="comment-context">
-          Você pode ler as conversas. Para comentar, solicite essa permissão ao responsável pela página.
-        </p>
-      )}
+      {available && role === "viewer" && <p className="comment-context">{t("comments.readonlyNotice")}</p>}
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
     </section>

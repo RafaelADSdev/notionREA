@@ -12,6 +12,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import * as Y from "yjs";
+import { useTranslations } from "@/lib/i18n/client";
 import type { StablePage } from "../model/stable-page";
 import {
   ensureTableCell,
@@ -50,6 +51,8 @@ function RemovalDialog({
   onConfirm: () => boolean;
   onCancel: () => void;
 }) {
+  const t = useTranslations();
+
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
   const id = useId();
@@ -85,18 +88,19 @@ function RemovalDialog({
       }}
     >
       <h2 id={`${id}-title`}>
-        {removal.last ? "Remover tabela?" : removal.kind === "row" ? "Remover linha?" : "Remover coluna?"}
+        {removal.last
+          ? t("editor.removeTableQuestion")
+          : removal.kind === "row"
+            ? t("editor.removeRowQuestion")
+            : t("editor.removeColumnQuestion")}
       </h2>
       <p>
-        {removal.last
-          ? "Esta é a última linha ou coluna. A tabela inteira será removida."
-          : "O conteúdo desta linha ou coluna também será removido."}{" "}
-        Você poderá recuperá-lo com Desfazer.
+        {removal.last ? t("editor.lastTablePart") : t("editor.removeTableContent")} {t("editor.undoRemoval")}
       </p>
       {error && <p role="alert">{error}</p>}
       <div className="editor-table-dialog-actions">
         <button ref={cancel} type="button" onClick={onCancel}>
-          Cancelar
+          {t("common.cancel")}
         </button>
         <button
           type="button"
@@ -113,7 +117,11 @@ function RemovalDialog({
             }
           }}
         >
-          {removal.last ? "Remover tabela" : removal.kind === "row" ? "Remover linha" : "Remover coluna"}
+          {removal.last
+            ? t("editor.removeTable")
+            : removal.kind === "row"
+              ? t("editor.removeRow")
+              : t("editor.removeColumn")}
         </button>
       </div>
     </dialog>
@@ -131,6 +139,8 @@ function cellEnd(page: StablePage, id: string): number {
 }
 
 export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, onRemove }: TableBlockProps) {
+  const t = useTranslations();
+
   const [removal, setRemoval] = useState<Removal | null>(null);
   const [error, setError] = useState("");
   const [cellSelection, setCellSelection] = useState<TableCellInterval | null>(null);
@@ -186,7 +196,7 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
       flushSync(action);
       setError("");
     } catch {
-      setError("Não foi possível alterar a tabela. Tente novamente.");
+      setError(t("editor.tableFailed"));
     }
   };
   const focus = (rowIndex: number, columnIndex: number, backwards = false) => {
@@ -265,7 +275,7 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
               )
             }
           />
-          Títulos na primeira linha
+          {t("editor.headerRow")}
         </label>
         <button
           type="button"
@@ -278,7 +288,7 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
             })
           }
         >
-          Adicionar linha
+          {t("editor.addRow")}
         </button>
         <button
           type="button"
@@ -293,12 +303,12 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
             })
           }
         >
-          Adicionar coluna
+          {t("editor.addColumn")}
         </button>
       </div>
       <div className="editor-table-scroll">
         <table
-          aria-label="Tabela simples"
+          aria-label={t("editor.simpleTable")}
           aria-describedby={selectionId}
           data-table-id={tableId}
           className="editor-table-grid"
@@ -453,13 +463,16 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
                           <button
                             type="button"
                             className="editor-table-empty"
-                            aria-label={`Editar célula vazia, linha ${rowIndex + 1}, coluna ${columnIndex + 1}`}
+                            aria-label={t("editor.editCellAt", {
+                              row: rowIndex + 1,
+                              column: columnIndex + 1,
+                            })}
                             onClick={() => run(() => focus(rowIndex, columnIndex))}
                           >
-                            Adicionar conteúdo
+                            {t("editor.addContent")}
                           </button>
                         ) : (
-                          <span className="editor-table-empty">Célula vazia</span>
+                          <span className="editor-table-empty">{t("editor.emptyCell")}</span>
                         ))}
                       <div className="editor-table-cell-actions">
                         <button
@@ -472,18 +485,21 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
                               columnIndex >= bounds.left &&
                               columnIndex <= bounds.right,
                           )}
-                          aria-label={`Selecionar célula, linha ${rowIndex + 1}, coluna ${columnIndex + 1}`}
+                          aria-label={t("editor.selectCellAt", {
+                            row: rowIndex + 1,
+                            column: columnIndex + 1,
+                          })}
                           onClick={() => {
                             const address = { row: row.id, column: column.id };
                             activate(address, address);
                           }}
                         >
-                          Selecionar célula
+                          {t("editor.selectCell")}
                         </button>
                         {editable && rowIndex === 0 && (
                           <button
                             type="button"
-                            aria-label={`Remover coluna ${columnIndex + 1}`}
+                            aria-label={t("editor.removeColumnNumber", { number: columnIndex + 1 })}
                             onClick={(event) => {
                               setError("");
                               setRemoval({
@@ -494,13 +510,13 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
                               });
                             }}
                           >
-                            Remover coluna
+                            {t("editor.removeColumn")}
                           </button>
                         )}
                         {editable && columnIndex === grid.columns.length - 1 && (
                           <button
                             type="button"
-                            aria-label={`Remover linha ${rowIndex + 1}`}
+                            aria-label={t("editor.removeRowNumber", { number: rowIndex + 1 })}
                             onClick={(event) => {
                               setError("");
                               setRemoval({
@@ -511,7 +527,7 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
                               });
                             }}
                           >
-                            Remover linha
+                            {t("editor.removeRow")}
                           </button>
                         )}
                       </div>
@@ -525,8 +541,10 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
       </div>
       <p id={selectionId} className="editor-table-selection-status" role="status">
         {bounds
-          ? `${(bounds.bottom - bounds.top + 1) * (bounds.right - bounds.left + 1)} células selecionadas. Shift + setas amplia; Ctrl ou Cmd + C copia; Delete limpa; Esc volta ao texto.`
-          : "Use Selecionar célula e Shift + setas, ou Shift + clique, para selecionar um intervalo."}
+          ? t("editor.cellsSelected", {
+              count: (bounds.bottom - bounds.top + 1) * (bounds.right - bounds.left + 1),
+            })
+          : t("editor.cellSelectionKeys")}
       </p>
       {error && !removal && (
         <p className="editor-table-error" role="alert">
@@ -544,7 +562,7 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
               const last = removal.kind === "row" ? current.rows.length === 1 : current.columns.length === 1;
               if (last !== removal.last) {
                 setRemoval({ ...removal, last });
-                setError("A tabela mudou. Confira a remoção antes de continuar.");
+                setError(t("editor.tableChanged"));
                 return false;
               }
               if (removal.kind === "row") removeTableRow(page, tableId, removal.id);
@@ -558,7 +576,7 @@ export function TableBlock({ page, tableId, editable, renderCell, onFocusCell, o
               }
               return true;
             } catch {
-              setError("Não foi possível alterar a tabela. Tente novamente.");
+              setError(t("editor.tableFailed"));
               return false;
             }
           }}

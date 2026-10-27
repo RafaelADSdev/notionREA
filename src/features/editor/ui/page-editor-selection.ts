@@ -19,7 +19,9 @@ function visibleIds(root: HTMLElement | null): string[] {
     .map((element) => element.dataset.editorBlock ?? "")
     .filter(Boolean);
 }
-function focusFrame(id: string): void {
+function focusFrame(id: string, pageId?: string): void {
+  if (pageId)
+    document.dispatchEvent(new CustomEvent("bloco:reveal-block", { detail: { pageId, blockId: id } }));
   const frame = document.querySelector<HTMLElement>(`[data-editor-block="${id}"]`);
   if (frame) {
     frame.focus();
@@ -31,6 +33,7 @@ export function usePageEditorSelection(
   controller: PageEditorController,
   root: RefObject<HTMLDivElement | null>,
   editable: boolean,
+  readOrder?: () => string[],
 ) {
   const range = useRef<{ anchor: string; head: string; selected: string[] } | null>(null);
   const onKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -70,14 +73,14 @@ export function usePageEditorSelection(
     const selected = controller.selectedRef.current.length
       ? controller.selectedRef.current
       : [target.dataset.editorBlock ?? ""];
-    const ids = visibleIds(root.current);
+    const ids = readOrder?.() ?? visibleIds(root.current);
     if (mod && key === "d") {
       event.preventDefault();
       event.stopPropagation();
       const copied = controller.run(() => duplicateBlockSelection(controller.session.page, selected));
       if (copied?.[0]) {
         controller.setSelected(copied);
-        focusFrame(copied[0]);
+        focusFrame(copied[0], controller.session.pageId);
       }
     } else if (event.shiftKey && ["ArrowUp", "ArrowDown"].includes(event.key) && !mod) {
       event.preventDefault();
@@ -91,7 +94,7 @@ export function usePageEditorSelection(
       const expanded = blockSelectionInterval(ids, anchor, next);
       range.current = { anchor, head: next, selected: expanded };
       controller.setSelected(expanded);
-      focusFrame(next);
+      focusFrame(next, controller.session.pageId);
     } else if (mod && event.shiftKey && ["ArrowUp", "ArrowDown"].includes(event.key)) {
       event.preventDefault();
       event.stopPropagation();
@@ -131,7 +134,7 @@ export function usePageEditorSelection(
       if (changed) {
         event.preventDefault();
         event.stopPropagation();
-        focusFrame(selected[0] ?? "");
+        focusFrame(selected[0] ?? "", controller.session.pageId);
       }
     }
   };
@@ -143,10 +146,10 @@ export function usePageEditorSelection(
     event.stopPropagation();
     const head = frame.dataset.editorBlock ?? "";
     const anchor = controller.selectedRef.current[0] ?? head;
-    const selected = blockSelectionInterval(visibleIds(root.current), anchor, head);
+    const selected = blockSelectionInterval(readOrder?.() ?? visibleIds(root.current), anchor, head);
     controller.setSelected(selected);
     range.current = { anchor, head, selected };
-    focusFrame(head);
+    focusFrame(head, controller.session.pageId);
   };
   return { onKeyDownCapture, onClickCapture };
 }

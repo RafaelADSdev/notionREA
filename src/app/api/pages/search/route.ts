@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { currentUser } from "@/lib/supabase/server";
-import { getEnvironment } from "@/lib/env";
 import { uuidSchema } from "@/features/auth/validation";
 import { searchPages } from "@/features/pages/queries";
+import { getEnvironment } from "@/lib/env";
 import { PayloadLimitError, readBoundedJson } from "@/lib/http";
+import { getTranslations } from "@/lib/i18n/server";
+import { currentUser } from "@/lib/supabase/server";
 
 const input = z.object({
   workspaceId: uuidSchema,
@@ -18,17 +19,19 @@ const input = z.object({
     .optional(),
 });
 export async function POST(request: NextRequest) {
+  const t = await getTranslations();
+
   if (request.headers.get("origin") !== new URL(getEnvironment().APP_URL).origin)
-    return NextResponse.json({ error: "Origem inválida." }, { status: 403 });
-  if (!(await currentUser())) return NextResponse.json({ error: "Entre novamente." }, { status: 401 });
+    return NextResponse.json({ error: t("errors.invalidOrigin") }, { status: 403 });
+  if (!(await currentUser())) return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401 });
   if (Number(request.headers.get("content-length") ?? 0) > 2048)
-    return NextResponse.json({ error: "Consulta extensa." }, { status: 413 });
+    return NextResponse.json({ error: t("errors.queryTooLong") }, { status: 413 });
   let parsed: z.infer<typeof input>;
   try {
     parsed = input.parse(await readBoundedJson(request, 2048));
   } catch (error) {
     return NextResponse.json(
-      { error: "Consulta inválida." },
+      { error: t("errors.invalidQuery") },
       { status: error instanceof PayloadLimitError ? 413 : 400 },
     );
   }
@@ -37,6 +40,6 @@ export async function POST(request: NextRequest) {
       headers: { "Cache-Control": "private, no-store" },
     });
   } catch {
-    return NextResponse.json({ error: "Não foi possível buscar as páginas." }, { status: 403 });
+    return NextResponse.json({ error: t("pages.searchFailed") }, { status: 403 });
   }
 }

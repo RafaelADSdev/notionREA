@@ -1,9 +1,12 @@
 "use client";
+
 import { Accessibility, defaultPreset } from "@dnd-kit/dom";
 import { DragDropProvider, type DragEndEvent, useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import Image from "next/image";
 import { type ReactNode, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
+import { formatDate } from "@/lib/i18n/format";
 import type { DatabaseSort, DateValue } from "../model";
 import type { DatabaseData, DatabaseProperty, DatabaseRow, SavedDatabaseView } from "../types";
 import { DatabaseCell, type RunCommand } from "./database-value";
@@ -20,34 +23,42 @@ type Props = {
   onRefresh: () => Promise<void>;
   onOpen: (id: string) => void;
 };
-const plugins = [
-  ...defaultPreset.plugins.filter((plugin) => plugin !== Accessibility),
-  {
-    plugin: Accessibility,
-    options: {
-      screenReaderInstructions: {
-        draggable: "Para mover, pressione Espaço, use as setas e confirme com Espaço. Escape cancela.",
-      },
-      announcements: {
-        dragstart: () => "Registro selecionado para mover.",
-        dragover: () => "Destino atualizado.",
-        dragend: (event: DragEndEvent) => (event.canceled ? "Movimento cancelado." : "Movimento solicitado."),
+function plugins(t: import("@/lib/i18n/core").Translator) {
+  return [
+    ...defaultPreset.plugins.filter((plugin) => plugin !== Accessibility),
+    {
+      plugin: Accessibility,
+      options: {
+        screenReaderInstructions: {
+          draggable: t("database.dragInstructions"),
+        },
+        announcements: {
+          dragstart: () => t("database.dragSelected"),
+          dragover: () => t("database.dragDestination"),
+          dragend: (event: DragEndEvent) =>
+            event.canceled ? t("common.moveCancelled") : t("database.moveRequested"),
+        },
       },
     },
-  },
-];
-function groupRows(data: DatabaseData, property: DatabaseProperty | undefined, board: boolean): Group[] {
-  if (!property) return [{ id: "all", label: "Registros", rows: data.rows }];
+  ];
+}
+function groupRows(
+  data: DatabaseData,
+  property: DatabaseProperty | undefined,
+  board: boolean,
+  t: import("@/lib/i18n/core").Translator,
+): Group[] {
+  if (!property) return [{ id: "all", label: t("database.records"), rows: data.rows }];
   const groups = new Map<string, Group>();
   const add = (id: string, label: string) => {
     if (!groups.has(id)) groups.set(id, { id, label, rows: [] });
   };
   if (board && property.type === "select") {
     for (const option of property.config.options) add(option.id, option.label);
-    add("empty", "Sem valor");
+    add("empty", t("database.noValue"));
   } else if (board && property.type === "checkbox") {
-    add("false", "Não marcado");
-    add("true", "Marcado");
+    add("false", t("database.unchecked"));
+    add("true", t("database.checked"));
   }
   for (const row of data.rows) {
     const value = rowValue(row, property);
@@ -59,7 +70,9 @@ function groupRows(data: DatabaseData, property: DatabaseProperty | undefined, b
     for (const id of keys) {
       add(
         id,
-        id === "empty" ? "Sem valor" : displayValue(property, Array.isArray(value) ? [id] : value, data),
+        id === "empty"
+          ? t("database.noValue")
+          : displayValue(property, Array.isArray(value) ? [id] : value, data, t),
       );
       groups.get(id)?.rows.push(row);
     }
@@ -67,6 +80,8 @@ function groupRows(data: DatabaseData, property: DatabaseProperty | undefined, b
   return [...groups.values()];
 }
 function GalleryCover({ fileId }: { fileId: string | null }) {
+  const t = useTranslations();
+
   const [failed, setFailed] = useState(false);
   return fileId && !failed ? (
     <Image
@@ -81,7 +96,7 @@ function GalleryCover({ fileId }: { fileId: string | null }) {
   ) : (
     <div className="db-gallery-fallback">
       <span aria-hidden="true">▰</span>
-      <span>Sem capa</span>
+      <span>{t("database.noCover")}</span>
     </div>
   );
 }
@@ -101,9 +116,15 @@ function DropGroup({ group, children, disabled }: { group: Group; children: Reac
   );
 }
 function DaySlot({ day, children, editable }: { day: string; children: ReactNode; editable: boolean }) {
+  const t = useTranslations();
   const { ref, isDropTarget } = useDroppable({ id: `db-day:${day}`, data: { day }, disabled: !editable });
   return (
-    <td ref={ref} className="db-calendar-day" data-drop-target={isDropTarget} aria-label={day}>
+    <td
+      ref={ref}
+      className="db-calendar-day"
+      data-drop-target={isDropTarget}
+      aria-label={formatDate(day, t.locale, { dateStyle: "full" })}
+    >
       <time dateTime={day}>{Number(day.slice(-2))}</time>
       {children}
     </td>
@@ -122,6 +143,8 @@ type RowProps = Props & {
   onDay: (row: DatabaseRow, day: string) => void;
 };
 function RecordPresentation(props: RowProps) {
+  const t = useTranslations();
+
   const { data, view, row, group, index, format, fields, manual } = props;
   const canDrag = data.editable && (manual || view.type === "board" || view.type === "calendar");
   const { ref, handleRef, isDragSource } = useSortable({
@@ -139,38 +162,44 @@ function RecordPresentation(props: RowProps) {
         type="button"
         disabled={!canDrag}
         className="db-drag-handle"
-        aria-label={`Mover ${row.title || "registro sem título"}`}
+        aria-label={t("database.moveRecordName", {
+          name: row.title || t("database.untitledRecordLowercase"),
+        })}
       >
-        Mover
+        {t("common.move")}
       </button>
       {manual && (
         <label className="db-reorder">
-          Mover antes de
+          {t("database.moveBefore")}
           <select
-            aria-label={`Posição de ${row.title || "registro sem título"}`}
+            aria-label={t("database.recordPositionName", {
+              name: row.title || t("database.untitledRecordLowercase"),
+            })}
             defaultValue="choose"
             onChange={(event) => {
               if (event.target.value !== "choose") props.onMove(row, event.target.value || null);
               event.target.value = "choose";
             }}
           >
-            <option value="choose">Escolher posição</option>
+            <option value="choose">{t("database.choosePosition")}</option>
             {data.rows
               .filter((item) => item.id !== row.id)
               .map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.title || "Sem título"}
+                  {item.title || t("common.untitled")}
                 </option>
               ))}
-            <option value="">Fim da lista</option>
+            <option value="">{t("database.endList")}</option>
           </select>
         </label>
       )}
       {view.type === "board" && (
         <label>
-          Mover para
+          {t("common.moveTo")}
           <select
-            aria-label={`Grupo de ${row.title || "registro sem título"}`}
+            aria-label={t("database.recordGroupName", {
+              name: row.title || t("database.untitledRecordLowercase"),
+            })}
             value={group.id}
             onChange={(event) => props.onGroup(row, event.target.value)}
           >
@@ -191,16 +220,18 @@ function RecordPresentation(props: RowProps) {
           }}
         >
           <label>
-            Mover para o dia
+            {t("database.moveToDay")}
             <input
-              aria-label={`Dia de ${row.title || "registro sem título"}`}
+              aria-label={t("database.recordDayName", {
+                name: row.title || t("database.untitledRecordLowercase"),
+              })}
               type="date"
               required
               value={targetDay}
               onChange={(event) => setTargetDay(event.target.value)}
             />
           </label>
-          <button type="submit">Mover data</button>
+          <button type="submit">{t("database.moveDate")}</button>
         </form>
       )}
     </div>
@@ -248,17 +279,19 @@ function RecordPresentation(props: RowProps) {
       ref={ref}
       className="db-card"
       data-dragging={isDragSource}
-      aria-label={row.title || "Registro sem título"}
+      aria-label={row.title || t("database.untitledRecord")}
     >
       {content}
     </article>
   );
 }
 export function DatabaseViews(props: Props) {
+  const t = useTranslations();
+
   const { data, view, groupBy, month } = props;
   const [error, setError] = useState("");
   const grouping = data.properties.find((property) => property.id === groupBy);
-  const groups = groupRows(data, grouping, view.type === "board");
+  const groups = groupRows(data, grouping, view.type === "board", t);
   const manual = data.editable && props.sorts.length === 0;
   const title = data.properties.find((property) => property.type === "title");
   const visible = view.visibleProperties
@@ -269,9 +302,9 @@ export function DatabaseViews(props: Props) {
     setError("");
     try {
       const result = await props.run(command);
-      if (!result.ok) setError("O movimento não foi aceito. Atualize os dados e tente novamente.");
+      if (!result.ok) setError(t("database.moveRejected"));
     } catch {
-      setError("Não foi possível mover o registro. Atualize os dados e tente novamente.");
+      setError(t("database.moveFailed"));
     }
   };
   const move = (row: DatabaseRow, beforeId: string | null) => {
@@ -303,7 +336,7 @@ export function DatabaseViews(props: Props) {
             ? { kind: "civil" as const, start: day, end: null }
             : null;
       if (!next) {
-        setError("Defina a hora e o fuso na propriedade de data antes de mover este registro.");
+        setError(t("database.setTimeZoneFirst"));
         return;
       }
       void accept({
@@ -314,7 +347,7 @@ export function DatabaseViews(props: Props) {
         expectedRevision: row.cellRevisions[dateProperty.id] ?? 0,
       });
     } catch {
-      setError("O horário não existe nesse dia e fuso. Escolha outra data ou ajuste a hora na propriedade.");
+      setError(t("database.invalidDayTime"));
     }
   };
   const present = (
@@ -361,7 +394,7 @@ export function DatabaseViews(props: Props) {
                   {property.name}
                 </th>
               ))}
-              {data.editable && <th scope="col">Posição</th>}
+              {data.editable && <th scope="col">{t("database.position")}</th>}
             </tr>
           </thead>
           {groups.map((group) => (
@@ -384,12 +417,12 @@ export function DatabaseViews(props: Props) {
           {groups.map((group) => (
             <DropGroup key={group.id} group={group} disabled={!data.editable}>
               {group.rows.map((row, index) => present(row, index, group, "card"))}
-              {!group.rows.length && <p>Nenhum registro neste grupo.</p>}
+              {!group.rows.length && <p>{t("database.emptyGroup")}</p>}
             </DropGroup>
           ))}
         </div>
       ) : (
-        <p>Escolha uma propriedade de Seleção ou Checkbox na configuração do board.</p>
+        <p>{t("database.chooseBoardProperty")}</p>
       );
   else if (view.type === "calendar") {
     const first = `${month}-01`;
@@ -419,17 +452,22 @@ export function DatabaseViews(props: Props) {
         : fields;
     content = (
       <div className="db-calendar">
-        <p>
-          Intervalos aparecem uma vez, no início visível, com suas datas completas. Datas com hora usam o fuso
-          do valor.
-        </p>
+        <p>{t("database.calendarNotice")}</p>
         <table>
           <caption>
-            {view.name} · {month}
+            {view.name} · {formatDate(`${month}-01`, t.locale, { month: "long", year: "numeric" })}
           </caption>
           <thead>
             <tr>
-              {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((day) => (
+              {[
+                t("calendar.monday"),
+                t("calendar.tuesday"),
+                t("calendar.wednesday"),
+                t("calendar.thursday"),
+                t("calendar.friday"),
+                t("calendar.saturday"),
+                t("calendar.sunday"),
+              ].map((day) => (
                 <th key={day} scope="col">
                   {day}
                 </th>
@@ -442,7 +480,17 @@ export function DatabaseViews(props: Props) {
                 {slots.slice(week * 7, week * 7 + 7).map((day) => (
                   <DaySlot key={day} day={day} editable={data.editable}>
                     {(dated.get(day) ?? []).map((row, index) =>
-                      present(row, index, { id: day, label: day, rows: dated.get(day) ?? [] }, "card", shown),
+                      present(
+                        row,
+                        index,
+                        {
+                          id: day,
+                          label: formatDate(day, t.locale, { dateStyle: "full" }),
+                          rows: dated.get(day) ?? [],
+                        },
+                        "card",
+                        shown,
+                      ),
                     )}
                   </DaySlot>
                 ))}
@@ -451,13 +499,19 @@ export function DatabaseViews(props: Props) {
           </tbody>
         </table>
         <section className="db-undated">
-          <h3>Sem data</h3>
+          <h3>{t("database.undated")}</h3>
           {undated.length ? (
             undated.map((row, index) =>
-              present(row, index, { id: "undated", label: "Sem data", rows: undated }, "card", shown),
+              present(
+                row,
+                index,
+                { id: "undated", label: t("database.undated"), rows: undated },
+                "card",
+                shown,
+              ),
             )
           ) : (
-            <p>Nenhum registro sem data nesta consulta.</p>
+            <p>{t("database.noUndated")}</p>
           )}
         </section>
       </div>
@@ -484,28 +538,23 @@ export function DatabaseViews(props: Props) {
   return (
     <div className="db-view-content">
       {props.sorts.length > 0 && data.editable && (
-        <p className="db-order-note">
-          A ordenação está ativa. Para reordenar manualmente, remova as ordenações; mover entre grupos
-          continua disponível.
-        </p>
+        <p className="db-order-note">{t("database.sortedNotice")}</p>
       )}
       {error && (
         <p role="alert">
           {error}
           <button
             type="button"
-            onClick={() =>
-              void props.onRefresh().catch(() => setError("Não foi possível atualizar os dados."))
-            }
+            onClick={() => void props.onRefresh().catch(() => setError(t("database.refreshFailed")))}
           >
-            Atualizar dados
+            {t("common.refreshData")}
           </button>
         </p>
       )}
-      <DragDropProvider plugins={plugins} onDragEnd={finish}>
+      <DragDropProvider plugins={plugins(t)} onDragEnd={finish}>
         {content}
       </DragDropProvider>
-      {!data.rows.length && <p className="db-empty">Nenhum registro corresponde a esta consulta.</p>}
+      {!data.rows.length && <p className="db-empty">{t("database.emptyQuery")}</p>}
     </div>
   );
 }

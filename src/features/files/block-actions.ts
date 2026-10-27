@@ -1,6 +1,8 @@
 "use server";
+
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { getTranslations } from "@/lib/i18n/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { PreparedFileUpload } from "./actions";
@@ -13,10 +15,10 @@ export type { PageFileInfo } from "./types";
 
 type BlockUploadInput = { pageId: string; name: string; type: string; size: number; kind: "image" | "file" };
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
-const failed =
-  "Não foi possível confirmar o arquivo. Confira seu acesso e tente novamente. Imagens devem ter até 30 megapixels e arquivos até 25 MiB.";
 
 export async function prepareBlockUpload(input: BlockUploadInput): Promise<Result<PreparedFileUpload>> {
+  const t = await getTranslations();
+
   try {
     const parsed = blockUploadSchema.parse(input);
     const client = await createClient(true);
@@ -45,12 +47,13 @@ export async function prepareBlockUpload(input: BlockUploadInput): Promise<Resul
   } catch {
     return {
       ok: false,
-      error:
-        "Não foi possível preparar o envio. Use PNG, JPEG, WebP ou GIF para imagens e arquivos de até 25 MiB. Confira seu acesso e tente novamente.",
+      error: t("files.prepareBlockFailure"),
     };
   }
 }
 export async function finishBlockUpload(fileId: string): Promise<Result<PageFileInfo>> {
+  const t = await getTranslations();
+
   try {
     const id = z.uuid().parse(fileId);
     const client = await createClient(true);
@@ -134,6 +137,6 @@ export async function finishBlockUpload(fileId: string): Promise<Result<PageFile
       };
     });
   } catch {
-    return { ok: false, error: failed };
+    return { ok: false, error: t("files.confirmBlockFailure") };
   }
 }

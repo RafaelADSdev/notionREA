@@ -1,10 +1,12 @@
 "use client";
+
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import type { PreparedFileUpload } from "@/features/files/actions";
 import { finishBlockUpload, prepareBlockUpload } from "@/features/files/block-actions";
 import type { BlockFileResolver } from "@/features/files/types";
 import { blockUploadSchema } from "@/features/files/validation";
+import { useTranslations } from "@/lib/i18n/client";
 import type { StablePage } from "../model/stable-page";
 
 export type { BlockFileResolver, PageFileInfo } from "@/features/files/types";
@@ -109,6 +111,8 @@ export function BlockMedia({
   kind: "image" | "file";
   resolver: BlockFileResolver;
 }) {
+  const t = useTranslations();
+
   const attrs = page.getBlockAttributes(blockId);
   const fileId = typeof attrs.fileId === "string" ? attrs.fileId : null;
   const info = useSyncExternalStore(
@@ -149,7 +153,7 @@ export function BlockMedia({
     try {
       page.setBlockAttributes(blockId, patch);
     } catch {
-      setFeedback("Confira o valor informado e tente novamente.");
+      setFeedback(t("editor.checkValue"));
     }
   }
   async function upload(file: File) {
@@ -158,7 +162,7 @@ export function BlockMedia({
     if (!blockUploadSchema.safeParse(declaration).success) {
       retryFile.current = null;
       setCanRetry(false);
-      setFeedback("Use PNG, JPEG, WebP ou GIF para imagens e arquivos de até 25 MiB.");
+      setFeedback(t("editor.fileRequirements"));
       setPhase("failed");
       return;
     }
@@ -174,7 +178,7 @@ export function BlockMedia({
       if (confirmedUpload.current?.file === file) prepared = confirmedUpload.current.prepared;
       else {
         setPhase("preparing");
-        setFeedback("Preparando envio…");
+        setFeedback(t("files.preparing"));
         const result = await prepareBlockUpload(declaration);
         if (!current()) return;
         if (!result.ok) {
@@ -186,7 +190,7 @@ export function BlockMedia({
         if (abort.signal.aborted) throw new DOMException("Upload cancelled", "AbortError");
         setPhase("uploading");
         setProgress(0);
-        setFeedback("Enviando arquivo…");
+        setFeedback(t("files.uploading"));
         await uploadBytes(prepared, file, kind, abort.signal, (value) => {
           if (current()) setProgress(value);
         });
@@ -194,7 +198,7 @@ export function BlockMedia({
       }
       if (!current() || abort.signal.aborted) return;
       setPhase("confirming");
-      setFeedback("Confirmando arquivo…");
+      setFeedback(t("files.confirming"));
       const result = await finishBlockUpload(prepared.fileId);
       if (!current()) return;
       if (!result.ok) {
@@ -208,14 +212,14 @@ export function BlockMedia({
       retryFile.current = null;
       setCanRetry(false);
       setPhase("idle");
-      setFeedback("Arquivo adicionado.");
+      setFeedback(t("files.added"));
     } catch (error) {
       if (current()) {
         setPhase("failed");
         setFeedback(
           error instanceof DOMException && error.name === "AbortError"
-            ? "Envio cancelado. Você pode tentar novamente."
-            : "O envio não terminou. Confira sua conexão e tente novamente.",
+            ? t("files.uploadCancelled")
+            : t("files.uploadFailed"),
         );
       }
     } finally {
@@ -245,16 +249,16 @@ export function BlockMedia({
           />
         ) : (
           <a className="block-file-download" href={`/api/files/${info.fileId}`} download>
-            {String(attrs.displayName ?? info.name)} <span>({info.size.toLocaleString("pt-BR")} bytes)</span>
+            {String(attrs.displayName ?? info.name)} <span>({info.size.toLocaleString(t.locale)} bytes)</span>
           </a>
         )
       ) : (
         <p className="block-media-placeholder">
           {fileId
-            ? "Arquivo indisponível ou carregando…"
+            ? t("files.loadingOrUnavailable")
             : kind === "image"
-              ? "Adicione uma imagem."
-              : "Adicione um arquivo."}
+              ? t("files.addImage")
+              : t("files.addFile")}
         </p>
       )}
       {visibleCaption && <figcaption>{visibleCaption}</figcaption>}
@@ -266,13 +270,13 @@ export function BlockMedia({
             aria-describedby={statusId}
             onClick={() => input.current?.click()}
           >
-            {fileId ? "Trocar arquivo" : kind === "image" ? "Enviar imagem" : "Enviar arquivo"}
+            {fileId ? t("files.replace") : kind === "image" ? t("files.uploadImage") : t("files.uploadFile")}
           </button>
           <input
             ref={input}
             hidden
             tabIndex={-1}
-            aria-label={kind === "image" ? "Imagem do bloco" : "Arquivo do bloco"}
+            aria-label={kind === "image" ? t("files.blockImage") : t("files.blockFile")}
             type="file"
             disabled={busy}
             {...(kind === "image" ? { accept: "image/png,image/jpeg,image/webp,image/gif" } : {})}
@@ -283,7 +287,7 @@ export function BlockMedia({
           />
           {(phase === "preparing" || phase === "uploading") && (
             <button type="button" onClick={() => controller.current?.abort()}>
-              Cancelar envio
+              {t("files.cancelUpload")}
             </button>
           )}
           {phase === "failed" && canRetry && (
@@ -294,24 +298,24 @@ export function BlockMedia({
                 if (file) void upload(file);
               }}
             >
-              Tentar envio novamente
+              {t("files.retryUpload")}
             </button>
           )}
           {phase === "uploading" && (
-            <progress aria-label="Progresso do envio" value={progress} max={100}>
-              {progress}%
+            <progress aria-label={t("files.progress")} value={progress} max={100}>
+              {progress.toLocaleString(t.locale)}%
             </progress>
           )}
           {kind === "image" && (
             <MediaField
-              label="Descrição da imagem"
+              label={t("files.imageDescription")}
               value={String(attrs.alt ?? "")}
               editable={editable}
               onCommit={(value) => commit({ alt: value })}
             />
           )}
           <MediaField
-            label="Legenda"
+            label={t("files.caption")}
             value={String(attrs.caption ?? "")}
             editable={editable}
             onPreview={setCaptionDraft}
@@ -322,14 +326,14 @@ export function BlockMedia({
           />
           {kind === "image" && (
             <MediaField
-              label="Largura da imagem"
+              label={t("files.imageWidth")}
               value={typeof attrs.width === "number" ? String(attrs.width) : ""}
               editable={editable}
               type="number"
               onCommit={(value) => {
                 const width = Number(value);
                 if (Number.isFinite(width) && width >= 10 && width <= 4096) commit({ width });
-                else setFeedback("Informe uma largura de 10 a 4096 pixels.");
+                else setFeedback(t("files.widthRange"));
               }}
             />
           )}

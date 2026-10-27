@@ -1,5 +1,7 @@
 "use client";
+
 import { useId, useRef, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { commentBody } from "./model";
 
 export function CommentComposer({
@@ -17,6 +19,8 @@ export function CommentComposer({
   onDraft?: (body: string) => void;
   onSend: (body: string, requestId: string) => Promise<boolean>;
 }) {
+  const t = useTranslations();
+
   const id = useId();
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -30,7 +34,7 @@ export function CommentComposer({
         if (disabled || sending) return;
         const parsed = commentBody.safeParse(body);
         if (!parsed.success) {
-          setError("Escreva até 8 KiB de texto para enviar.");
+          setError(t("comments.writeLimitSend"));
           return;
         }
         if (operation.current?.body !== body || operation.current.scope !== requestScope)
@@ -46,7 +50,7 @@ export function CommentComposer({
               operation.current = null;
             }
           })
-          .catch(() => setError("Não foi possível enviar. Seu texto foi preservado."))
+          .catch(() => setError(t("comments.sendFailed")))
           .finally(() => setSending(false));
       }}
     >
@@ -64,9 +68,9 @@ export function CommentComposer({
         aria-describedby={`${id}-limit`}
       />
       <div className="comment-composer-footer">
-        <small id={`${id}-limit`}>Texto simples · até 8 KiB</small>
+        <small id={`${id}-limit`}>{t("comments.plainTextLimit")}</small>
         <button type="submit" disabled={disabled || sending}>
-          {sending ? "Enviando…" : submitLabel}
+          {sending ? t("common.sending") : submitLabel}
         </button>
       </div>
       {disabled && body && (
@@ -75,13 +79,13 @@ export function CommentComposer({
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(body);
-              setError("Rascunho copiado.");
+              setError(t("editor.draftCopied"));
             } catch {
-              setError("Não foi possível copiar. Selecione seu texto no campo acima.");
+              setError(t("comments.copyFailed"));
             }
           }}
         >
-          Copiar meu rascunho
+          {t("comments.copyDraft")}
         </button>
       )}
       {error && <p role="status">{error}</p>}

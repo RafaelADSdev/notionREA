@@ -55,7 +55,7 @@ export function remoteCursors(document: Y.Doc, blockId: string) {
               caret.append(label);
               return caret;
             },
-            { key: participant.participantId, side: 1 },
+            { key: `${participant.participantId}:${participant.label}`, side: 1 },
           ),
         );
       } catch {

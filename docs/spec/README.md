@@ -1,6 +1,6 @@
 # Especificação funcional do Bloco
 
-Contrato proposto para aprovação no Checkpoint 1. Origem: requisitos da missão e decisões originais D, informadas por documentação pública. Não é uma reconstrução de código do aplicativo de referência. A análise sanitizada fica em `docs/rea/`; implementação deve consultar este contrato e as ADRs aprovadas.
+Contrato aprovado no Checkpoint 1. Origem: requisitos da missão e decisões originais D, informadas por documentação pública. Não é uma reconstrução de código do aplicativo de referência. A análise sanitizada fica em `docs/rea/`; implementação consulta este contrato e as ADRs aprovadas. Estado de execução e limites comprovados ficam exclusivamente no [PLAN](../PLAN.md).
 
 ## Objetivo e público
 
@@ -33,7 +33,7 @@ Ordem de entrega: M1 → M2 → M3 → M4 → M5 → M6. Os contratos de autoriz
 
 ## Comandos e verificação
 
-Nesta fase somente `git diff --check` é executável no projeto. Não há package manifest ou aplicação. No M1 devem existir `pnpm dev`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`, `pnpm test:rls`, `pnpm db:types` e `pnpm db:types:check`; CLI local acessível como `pnpm supabase`.
+Os comandos implementados, instalação reproduzível e uso das stacks pessoal/isolada estão no [README](../../README.md) e no [setup](../setup.md). `pnpm build`, lint, tipos, unitários, integrações, RLS e Playwright compõem os gates; a CLI local é acessível como `pnpm supabase`. Reset e dados sintéticos pertencem somente à stack `bloco-test`.
 
 Vitest testa invariantes, conversões, filtros e ordenação; testes de banco testam RLS, constraints e transações; Playwright testa interação real, seleção, IME, acesso e colaboração. Testes não devem espelhar a implementação ou aceitar execução falsa em DOM simulado para comprovar edição. Casos específicos constam nos contratos. O DoD e métricas ficam em [qualidade](interchange-quality.md).
 

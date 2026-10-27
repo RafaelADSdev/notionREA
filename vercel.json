@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile --ignore-scripts",
+  "buildCommand": "pnpm build",
+  "functions": {
+    "src/app/api/interchange/**/*.ts": { "maxDuration": 60 },
+    "src/app/api/documents/**/*.ts": { "maxDuration": 30 },
+    "src/app/api/databases/**/*.ts": { "maxDuration": 60 }
+  }
+}

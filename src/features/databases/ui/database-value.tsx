@@ -1,5 +1,7 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   DATABASE_MODEL_LIMITS,
   type DateValue,
@@ -30,7 +32,9 @@ type ValueProps = {
   disabled?: boolean;
 };
 export function ValueInput({ property, value, onChange, people, references, disabled }: ValueProps) {
-  if (isSystemProperty(property)) return <output>Preenchido pelo sistema</output>;
+  const t = useTranslations();
+
+  if (isSystemProperty(property)) return <output>{t("database.systemValue")}</output>;
   if (property.type === "checkbox")
     return (
       <label>
@@ -40,7 +44,7 @@ export function ValueInput({ property, value, onChange, people, references, disa
           disabled={disabled}
           onChange={(event) => onChange(event.target.checked)}
         />{" "}
-        Marcado
+        {t("database.checked")}
       </label>
     );
   if (property.type === "select")
@@ -51,7 +55,7 @@ export function ValueInput({ property, value, onChange, people, references, disa
         value={typeof value === "string" ? value : ""}
         onChange={(event) => onChange(event.target.value || null)}
       >
-        <option value="">Sem valor</option>
+        <option value="">{t("database.noValue")}</option>
         {property.config.options.map((option) => (
           <option key={option.id} value={option.id}>
             {option.label}
@@ -109,10 +113,10 @@ export function ValueInput({ property, value, onChange, people, references, disa
                 checked
                 onChange={() => onChange(selected.filter((item) => item !== id))}
               />
-              Referência indisponível
+              {t("editor.referenceUnavailable")}
             </label>
           ))}
-        {!choices.length && <p>Nenhuma opção autorizada disponível.</p>}
+        {!choices.length && <p>{t("database.noOptions")}</p>}
       </fieldset>
     );
   }
@@ -136,7 +140,7 @@ export function ValueInput({ property, value, onChange, people, references, disa
       <fieldset className="db-date-input" disabled={disabled}>
         <legend>{property.name}</legend>
         <label>
-          {kind === "civil" ? "Dia inicial" : "Início com fuso (ISO 8601)"}
+          {kind === "civil" ? t("database.startDay") : t("database.startInstant")}
           <input
             type={kind === "civil" ? "date" : "text"}
             value={date?.start ?? ""}
@@ -147,7 +151,7 @@ export function ValueInput({ property, value, onChange, people, references, disa
           />
         </label>
         <label>
-          {kind === "civil" ? "Dia final (opcional)" : "Fim com fuso (opcional)"}
+          {kind === "civil" ? t("database.endDay") : t("database.endInstant")}
           <input
             type={kind === "civil" ? "date" : "text"}
             value={date?.end ?? ""}
@@ -156,7 +160,7 @@ export function ValueInput({ property, value, onChange, people, references, disa
         </label>
         {kind === "instant" && (
           <label>
-            Fuso horário
+            {t("database.timeZone")}
             <input
               value={
                 date?.kind === "instant" ? date.timeZone : Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -178,7 +182,10 @@ export function ValueInput({ property, value, onChange, people, references, disa
           value={typeof value === "string" ? value : ""}
           onChange={(event) => onChange(event.target.value)}
         />
-        <small>Até {DATABASE_MODEL_LIMITS.textLength.toLocaleString("pt-BR")} caracteres.</small>
+        <small>
+          {t("database.upTo")} {DATABASE_MODEL_LIMITS.textLength.toLocaleString(t.locale)}{" "}
+          {t("database.characters")}
+        </small>
       </>
     );
   return (
@@ -209,6 +216,8 @@ export function DatabaseCell({
   onRefresh: () => Promise<void>;
   onOpen: (id: string) => void;
 }) {
+  const t = useTranslations();
+
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<PropertyValue>(null);
   const [pending, setPending] = useState(false);
@@ -246,14 +255,12 @@ export function DatabaseCell({
         expectedRevision: revision.current,
       });
       if (!result.ok) {
-        setError(
-          "Não foi possível salvar. O valor pode ter sido alterado em outra sessão. Atualize os dados e tente novamente; seu rascunho continua aqui.",
-        );
+        setError(t("database.saveCellFailed"));
         return;
       }
       close();
     } catch {
-      setError("Valor inválido. Confira o formato e tente novamente.");
+      setError(t("database.invalidValue"));
     } finally {
       setPending(false);
     }
@@ -263,7 +270,7 @@ export function DatabaseCell({
       <form
         ref={form}
         className="db-cell-editor"
-        aria-label={`Editar ${property.name}`}
+        aria-label={`${t("common.edit")} ${property.name}`}
         onSubmit={(event) => {
           event.preventDefault();
           void save();
@@ -305,19 +312,19 @@ export function DatabaseCell({
                       latest.current.cellRevisions[property.id] ??
                       (property.type === "title" ? latest.current.revision : 0);
                   })
-                  .catch(() => setError("Não foi possível atualizar os dados. Seu rascunho foi mantido."));
+                  .catch(() => setError(t("database.refreshDraftFailed")));
               }}
             >
-              Atualizar dados
+              {t("common.refreshData")}
             </button>
           </p>
         )}
         <div className="db-actions">
           <button disabled={pending} type="submit">
-            {pending ? "Salvando…" : "Salvar"}
+            {pending ? t("common.saving") : t("common.save")}
           </button>
           <button disabled={pending} type="button" onClick={close}>
-            Cancelar
+            {t("common.cancel")}
           </button>
           {property.type !== "title" && property.type !== "checkbox" && (
             <button
@@ -326,7 +333,7 @@ export function DatabaseCell({
                 setDraft(["multiSelect", "person", "relation"].includes(property.type) ? [] : null)
               }
             >
-              Limpar valor
+              {t("database.clearValue")}
             </button>
           )}
         </div>
@@ -336,16 +343,19 @@ export function DatabaseCell({
     <div className="db-cell">
       {property.type === "title" && (
         <button type="button" className="db-row-title" onClick={() => onOpen(row.id)}>
-          {row.title || "Sem título"}
+          {row.title || t("common.untitled")}
         </button>
       )}
-      {property.type !== "title" && !editable && <span>{displayValue(property, value, data)}</span>}
+      {property.type !== "title" && !editable && <span>{displayValue(property, value, data, t)}</span>}
       {editable && (
         <button
           ref={trigger}
           type="button"
           className="db-cell-trigger"
-          aria-label={`Editar ${property.name}: ${displayValue(property, value, data)}`}
+          aria-label={t("database.editPropertyValue", {
+            name: property.name,
+            value: displayValue(property, value, data, t),
+          })}
           onClick={() => {
             revision.current =
               row.cellRevisions[property.id] ?? (property.type === "title" ? row.revision : 0);
@@ -354,7 +364,7 @@ export function DatabaseCell({
             setEditing(true);
           }}
         >
-          {property.type === "title" ? "Editar título" : displayValue(property, value, data)}
+          {property.type === "title" ? t("database.editTitle") : displayValue(property, value, data, t)}
         </button>
       )}
     </div>

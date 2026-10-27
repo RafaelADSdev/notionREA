@@ -425,6 +425,183 @@ export type Database = {
           },
         ];
       };
+      interchange_items: {
+        Row: {
+          actor_id: string;
+          database_id: string | null;
+          file_id: string | null;
+          index: number;
+          job_id: string;
+          key: string;
+          kind: string;
+          page_id: string | null;
+          payload: NonNullable<Json>;
+          source_page_id: string | null;
+          state: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          actor_id: string;
+          database_id?: string | null;
+          file_id?: string | null;
+          index: number;
+          job_id: string;
+          key: string;
+          kind: string;
+          page_id?: string | null;
+          payload?: NonNullable<Json>;
+          source_page_id?: string | null;
+          state?: string;
+          workspace_id: string;
+        };
+        Update: {
+          actor_id?: string;
+          database_id?: string | null;
+          file_id?: string | null;
+          index?: number;
+          job_id?: string;
+          key?: string;
+          kind?: string;
+          page_id?: string | null;
+          payload?: NonNullable<Json>;
+          source_page_id?: string | null;
+          state?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "interchange_items_database_id_workspace_id_fkey";
+            columns: ["database_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "databases";
+            referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "interchange_items_file_id_fkey";
+            columns: ["file_id"];
+            isOneToOne: false;
+            referencedRelation: "page_files";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "interchange_items_job_id_workspace_id_actor_id_fkey";
+            columns: ["job_id", "workspace_id", "actor_id"];
+            isOneToOne: false;
+            referencedRelation: "interchange_jobs";
+            referencedColumns: ["id", "workspace_id", "actor_id"];
+          },
+          {
+            foreignKeyName: "interchange_items_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "interchange_items_source_page_id_workspace_id_fkey";
+            columns: ["source_page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
+      interchange_jobs: {
+        Row: {
+          actor_id: string;
+          confirmed: boolean;
+          created_at: string;
+          cursor: NonNullable<Json>;
+          id: string;
+          kind: string;
+          lease_expires_at: string | null;
+          lease_id: string | null;
+          parent_id: string | null;
+          report: NonNullable<Json>;
+          request_hash: string;
+          request_id: string;
+          revision: number;
+          root_page_id: string | null;
+          source_digest: string;
+          source_name: string;
+          source_path: string;
+          source_size: number;
+          state: string;
+          updated_at: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          actor_id: string;
+          confirmed?: boolean;
+          created_at?: string;
+          cursor?: NonNullable<Json>;
+          id?: string;
+          kind: string;
+          lease_expires_at?: string | null;
+          lease_id?: string | null;
+          parent_id?: string | null;
+          report?: NonNullable<Json>;
+          request_hash: string;
+          request_id: string;
+          revision?: number;
+          root_page_id?: string | null;
+          source_digest?: string;
+          source_name?: string;
+          source_path: string;
+          source_size?: number;
+          state: string;
+          updated_at?: string;
+          workspace_id: string;
+        };
+        Update: {
+          actor_id?: string;
+          confirmed?: boolean;
+          created_at?: string;
+          cursor?: NonNullable<Json>;
+          id?: string;
+          kind?: string;
+          lease_expires_at?: string | null;
+          lease_id?: string | null;
+          parent_id?: string | null;
+          report?: NonNullable<Json>;
+          request_hash?: string;
+          request_id?: string;
+          revision?: number;
+          root_page_id?: string | null;
+          source_digest?: string;
+          source_name?: string;
+          source_path?: string;
+          source_size?: number;
+          state?: string;
+          updated_at?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "interchange_jobs_parent_id_workspace_id_fkey";
+            columns: ["parent_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "interchange_jobs_root_page_id_workspace_id_fkey";
+            columns: ["root_page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "interchange_jobs_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       page_backlinks: {
         Row: {
           source_page_id: string;
@@ -928,6 +1105,11 @@ export type Database = {
         Args: { p_database_id: string; p_is_template?: boolean; p_request_id: string; p_title: string };
         Returns: Json;
       };
+      cancel_interchange_job: { Args: { p_job_id: string }; Returns: Json };
+      claim_interchange_job: {
+        Args: { p_actor_id: string; p_job_id: string; p_lease_id: string };
+        Returns: Json;
+      };
       clear_page_cover: { Args: { p_expected_revision: number; p_page_id: string }; Returns: number };
       commit_content_document: {
         Args: {
@@ -949,6 +1131,21 @@ export type Database = {
           p_hash: string;
           p_operation_id: string;
           p_page_id: string;
+          p_payload: string;
+          p_projection: Json;
+          p_snapshot: string;
+        };
+        Returns: number;
+      };
+      commit_interchange_document: {
+        Args: {
+          p_actor_id: string;
+          p_expected_revision: number;
+          p_hash: string;
+          p_job_id: string;
+          p_key: string;
+          p_lease_id: string;
+          p_operation_id: string;
           p_payload: string;
           p_projection: Json;
           p_snapshot: string;
@@ -982,6 +1179,7 @@ export type Database = {
         };
         Returns: Json;
       };
+      confirm_interchange_job: { Args: { p_job_id: string }; Returns: Json };
       create_comment_thread: {
         Args: {
           p_anchor?: Json;
@@ -994,6 +1192,19 @@ export type Database = {
       };
       create_database: {
         Args: { p_parent_page_id: string; p_request_id: string; p_title: string; p_workspace_id: string };
+        Returns: Json;
+      };
+      create_interchange_job: {
+        Args: {
+          p_kind: string;
+          p_parent_id?: string;
+          p_request_id: string;
+          p_root_page_id?: string;
+          p_source_digest?: string;
+          p_source_name?: string;
+          p_source_size?: number;
+          p_workspace_id: string;
+        };
         Returns: Json;
       };
       create_invite: {
@@ -1035,6 +1246,30 @@ export type Database = {
         Args: { p_body: string; p_comment_id: string; p_expected_revision: number };
         Returns: number;
       };
+      ensure_interchange_page: {
+        Args: {
+          p_database_id?: string;
+          p_is_database?: boolean;
+          p_job_id: string;
+          p_key: string;
+          p_lease_id: string;
+          p_parent_id?: string;
+          p_title: string;
+        };
+        Returns: Json;
+      };
+      ensure_interchange_property: {
+        Args: {
+          p_column: number;
+          p_config: Json;
+          p_job_id: string;
+          p_key: string;
+          p_lease_id: string;
+          p_name: string;
+          p_type: string;
+        };
+        Returns: string;
+      };
       finalize_page_block_file: {
         Args: {
           p_actor_id: string;
@@ -1073,10 +1308,16 @@ export type Database = {
           schema_version: number;
         }[];
       };
+      get_interchange_job: { Args: { p_after_index?: number; p_job_id: string }; Returns: Json };
       get_page_database: { Args: { p_page_id: string }; Returns: Json };
       get_page_metadata: { Args: { p_page_id: string; p_workspace_id: string }; Returns: Json };
       get_page_role: { Args: { p_page_id: string }; Returns: string };
       get_page_sharing: { Args: { p_page_id: string }; Returns: Json };
+      interchange_download_parts: { Args: { p_after_index?: number; p_job_id: string }; Returns: Json };
+      interchange_export_pages: {
+        Args: { p_actor_id: string; p_after_id?: string; p_job_id: string; p_lease_id: string };
+        Returns: Json;
+      };
       list_comment_threads: {
         Args: { p_after_created_at?: string; p_after_id?: string; p_page_id: string };
         Returns: Json;
@@ -1088,6 +1329,10 @@ export type Database = {
           pageId: string;
           title: string;
         }[];
+      };
+      list_interchange_jobs: {
+        Args: { p_after_created_at?: string; p_after_id?: string; p_workspace_id: string };
+        Returns: Json;
       };
       list_page_backlinks: {
         Args: { p_after_id?: string; p_page_id: string };
@@ -1165,6 +1410,19 @@ export type Database = {
         Args: { p_kind: string; p_mime_type: string; p_name: string; p_page_id: string; p_size: number };
         Returns: string;
       };
+      prepare_interchange_file: {
+        Args: {
+          p_job_id: string;
+          p_key: string;
+          p_kind: string;
+          p_lease_id: string;
+          p_mime_type: string;
+          p_name: string;
+          p_page_id: string;
+          p_size: number;
+        };
+        Returns: string;
+      };
       prepare_page_file: {
         Args: { p_mime_type: string; p_name: string; p_page_id: string; p_size: number };
         Returns: string;
@@ -1213,6 +1471,23 @@ export type Database = {
         };
         Returns: Json;
       };
+      put_interchange_item: {
+        Args: {
+          p_actor_id: string;
+          p_database_id?: string;
+          p_file_id?: string;
+          p_index: number;
+          p_job_id: string;
+          p_key: string;
+          p_kind: string;
+          p_lease_id: string;
+          p_page_id?: string;
+          p_payload: Json;
+          p_source_page_id?: string;
+          p_state: string;
+        };
+        Returns: undefined;
+      };
       query_database_records: {
         Args: {
           p_cursor?: Json;
@@ -1231,7 +1506,21 @@ export type Database = {
         Args: { p_offset?: number; p_page_id: string; p_revision: number };
         Returns: string;
       };
+      read_interchange_items: {
+        Args: {
+          p_actor_id: string;
+          p_after_index?: number;
+          p_job_id: string;
+          p_kind?: string;
+          p_lease_id: string;
+        };
+        Returns: Json;
+      };
       read_page_publication: { Args: { p_after_id?: string; p_token: string }; Returns: Json };
+      read_public_content_chunk: {
+        Args: { p_hash: string; p_index: number; p_token: string };
+        Returns: Json;
+      };
       remove_member: { Args: { p_user_id: string; p_workspace_id: string }; Returns: undefined };
       remove_page: { Args: { p_expected_revision: number; p_page_id: string }; Returns: string };
       renew_page_presence: { Args: { p_page_id: string; p_participant_id: string }; Returns: Json };
@@ -1293,7 +1582,30 @@ export type Database = {
         Args: { p_expected_revision: number; p_page_id: string; p_patch: Json };
         Returns: number;
       };
+      validate_interchange_references: {
+        Args: {
+          p_actor_id: string;
+          p_ids: string[];
+          p_job_id: string;
+          p_kind: string;
+          p_lease_id: string;
+          p_target_database_id?: string;
+        };
+        Returns: undefined;
+      };
       verify_public_file: { Args: { p_file_id: string; p_token: string }; Returns: boolean };
+      write_interchange_job: {
+        Args: {
+          p_actor_id: string;
+          p_cursor: Json;
+          p_job_id: string;
+          p_lease_id: string;
+          p_release?: boolean;
+          p_report: Json;
+          p_state: string;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       [_ in never]: never;

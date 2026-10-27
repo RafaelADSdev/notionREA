@@ -1,5 +1,7 @@
 "use client";
+
 import { useEffect, useRef } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { CommentsPanel } from "./comments-panel";
 import type { CommentAnchor } from "./model";
 
@@ -14,6 +16,8 @@ export function BlockCommentsDialog({
   anchor?: CommentAnchor;
   onClose: () => void;
 }) {
+  const t = useTranslations();
+
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const previous = document.activeElement;
@@ -29,14 +33,14 @@ export function BlockCommentsDialog({
     <dialog
       ref={dialog}
       className="block-comments-dialog"
-      aria-label="Comentários do bloco"
+      aria-label={t("comments.blockComments")}
       onCancel={(event) => {
         event.preventDefault();
         onClose();
       }}
     >
       <button type="button" onClick={onClose}>
-        Fechar comentários
+        {t("comments.close")}
       </button>
       <CommentsPanel pageId={pageId} blockId={blockId} {...(anchor ? { anchor } : {})} />
     </dialog>

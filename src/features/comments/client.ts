@@ -1,6 +1,7 @@
 "use client";
 import { z } from "zod";
 import { readBoundedJson } from "@/lib/http";
+import { createTranslator, DEFAULT_LOCALE, type Translator } from "@/lib/i18n/core";
 import {
   commentRevision,
   createThreadSchema,
@@ -14,17 +15,7 @@ import {
 
 export class CommentHttpError extends Error {
   constructor(public readonly status: number) {
-    super(
-      status === 401 || status === 403
-        ? "O acesso aos comentários mudou. Seu rascunho foi preservado."
-        : status === 409
-          ? "O comentário mudou. Atualize a conversa antes de reaplicar sua edição."
-          : status === 429
-            ? "Muitas alterações. Aguarde um instante antes de tentar novamente."
-            : status === 400 || status === 413
-              ? "Confira o comentário: o limite é 8 KiB de texto."
-              : "Não foi possível concluir. Seu texto foi preservado; tente novamente.",
-    );
+    super("Comment request failed");
   }
 }
 async function request<T>(
@@ -100,10 +91,22 @@ export function removeComment(commentId: string, input: unknown) {
     deleteCommentSchema.parse(input),
   );
 }
-export function commentErrorMessage(error: unknown): string {
-  return error instanceof CommentHttpError
-    ? error.message
-    : "Não foi possível concluir. Confira o texto e tente novamente; seu rascunho foi preservado.";
+export function commentErrorMessage(
+  error: unknown,
+  t: Translator = createTranslator(DEFAULT_LOCALE),
+): string {
+  if (!(error instanceof CommentHttpError)) return t("comments.checkPreserved");
+  return t(
+    error.status === 401 || error.status === 403
+      ? "comments.accessChanged"
+      : error.status === 409
+        ? "comments.conflict"
+        : error.status === 429
+          ? "comments.rateLimit"
+          : error.status === 400 || error.status === 413
+            ? "comments.checkLimit"
+            : "comments.retryPreserved",
+  );
 }
 export function commentAccessLost(error: unknown): boolean {
   return error instanceof CommentHttpError && (error.status === 401 || error.status === 403);

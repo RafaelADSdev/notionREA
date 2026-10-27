@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Icon } from "./icon";
 import { saveTheme } from "@/features/auth/actions";
+import { useTranslations } from "@/lib/i18n/client";
+import { Icon } from "./icon";
 
 export function ThemeToggle({
   initialTheme = "system",
@@ -11,6 +12,8 @@ export function ThemeToggle({
   initialTheme?: "system" | "light" | "dark";
   scope?: string;
 }) {
+  const t = useTranslations();
+
   const [theme, setTheme] = useState(initialTheme);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState(false);
@@ -46,10 +49,17 @@ export function ThemeToggle({
       aria-busy={pending}
       aria-label={
         error
-          ? "Não foi possível salvar o tema. Tentar novamente"
-          : `Tema: ${theme === "system" ? "automático" : theme === "light" ? "claro" : "escuro"}. Alterar tema`
+          ? t("theme.saveFailed")
+          : t("theme.current", {
+              theme:
+                theme === "system"
+                  ? t("theme.system")
+                  : theme === "light"
+                    ? t("theme.light")
+                    : t("theme.dark"),
+            })
       }
-      title="Alterar tema"
+      title={t("theme.change")}
     >
       <Icon name={theme === "dark" ? "moon" : "sun"} />
     </button>

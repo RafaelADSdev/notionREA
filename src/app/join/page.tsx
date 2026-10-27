@@ -1,31 +1,33 @@
 import Link from "next/link";
 import { Brand } from "@/components/icon";
 import { Join } from "@/features/workspaces/join";
+import { getTranslations } from "@/lib/i18n/server";
 import { currentUser } from "@/lib/supabase/server";
 
 export default async function JoinPage() {
+  const t = await getTranslations();
+
   const user = await currentUser();
   return (
     <main id="main" className="auth-main" style={{ minHeight: "100svh" }}>
       <div className="auth-content">
         <Brand />
-        <h1>Tem lugar para você.</h1>
+        <h1>{t("workspaces.inviteWelcome")}</h1>
         {user ? (
           <>
-            <p>Confirme sua entrada no workspace. O convite precisa ter sido enviado para {user.email}.</p>
+            <p>
+              {t("workspaces.confirmJoin")} {user.email}.
+            </p>
             <Join />
           </>
         ) : (
           <>
-            <p>
-              Entre com o e-mail convidado e confirmado. Depois, abra este link novamente para aceitar o
-              convite.
-            </p>
+            <p>{t("workspaces.signInToJoin")}</p>
             <Link className="button" href="/login">
-              Entrar no Bloco
+              {t("auth.signInBloco")}
             </Link>
             <p className="form-footer">
-              <Link href="/register">Ainda não tenho conta</Link>
+              <Link href="/register">{t("auth.noAccount")}</Link>
             </p>
           </>
         )}

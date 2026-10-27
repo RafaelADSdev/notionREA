@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
-import { WorkspaceShell } from "@/features/workspaces/shell";
-import { createClient, currentUser } from "@/lib/supabase/server";
 import { uuidSchema } from "@/features/auth/validation";
+import { WorkspaceShell } from "@/features/workspaces/shell";
+import { getTranslations } from "@/lib/i18n/server";
+import { createClient, currentUser } from "@/lib/supabase/server";
 
 export default async function WorkspaceLayout({
   children,
@@ -10,6 +11,8 @@ export default async function WorkspaceLayout({
   children: React.ReactNode;
   params: Promise<{ workspaceId: string }>;
 }) {
+  const t = await getTranslations();
+
   const user = await currentUser();
   if (!user) redirect("/login");
   const id = (await params).workspaceId;
@@ -26,14 +29,13 @@ export default async function WorkspaceLayout({
     client.from("workspaces").select("id,name").order("id").limit(50),
   ]);
   if (!current.data || !memberships.data) notFound();
-  if (current.error || memberships.error || list.error)
-    throw new Error("Não foi possível abrir o workspace.");
+  if (current.error || memberships.error || list.error) throw new Error(t("workspaces.openFailed"));
   const workspaces = list.data.some((item) => item.id === id) ? list.data : [current.data, ...list.data];
   return (
     <WorkspaceShell
       workspace={current.data}
       workspaces={workspaces}
-      email={user.email ?? "Sua conta"}
+      email={user.email ?? t("workspaces.yourAccount")}
       userId={user.id}
       isOwner={memberships.data.role === "owner"}
     >

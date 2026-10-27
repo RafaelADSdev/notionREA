@@ -7,6 +7,7 @@ import { CreateDatabaseControl } from "@/features/databases/create-control";
 import { DatabaseClient } from "@/features/databases/database-client";
 import { RecordProperties } from "@/features/databases/record-properties";
 import { PageEditor } from "@/features/editor/ui/page-editor";
+import { ImportExportControl } from "@/features/interchange/ui/import-export-control";
 import { BreadcrumbTrail } from "@/features/pages/breadcrumbs";
 import { PageCover } from "@/features/pages/cover";
 import { CreatePageControl } from "@/features/pages/create-control";
@@ -15,6 +16,7 @@ import { breadcrumbSchema, pageDetailSchema, pageSummarySchema } from "@/feature
 import { PageList } from "@/features/pages/page-list";
 import { childrenOf } from "@/features/pages/queries";
 import { ShareControl } from "@/features/sharing/share-control";
+import { getTranslations } from "@/lib/i18n/server";
 import { createClient, currentUser } from "@/lib/supabase/server";
 
 export default async function PageDocument({
@@ -24,6 +26,8 @@ export default async function PageDocument({
   params: Promise<{ workspaceId: string; pageId: string }>;
   searchParams: Promise<{ new?: string; afterPosition?: string; afterId?: string }>;
 }) {
+  const t = await getTranslations();
+
   const user = await currentUser();
   if (!user) redirect("/login");
   const { workspaceId, pageId } = await params;
@@ -34,7 +38,7 @@ export default async function PageDocument({
     p_workspace_id: workspaceId,
   });
   const raw = pageDetailSchema.nullable().parse(data);
-  if (error) throw new Error("Não foi possível carregar a página.");
+  if (error) throw new Error(t("pages.documentLoadFailed"));
   if (!raw) notFound();
   const page = pageSummarySchema.parse(raw);
   const query = await searchParams;
@@ -50,10 +54,9 @@ export default async function PageDocument({
     childrenOf(workspaceId, pageId, query.afterPosition, query.afterId),
     client.rpc("get_page_database", { p_page_id: pageId }),
   ]);
-  if (access.error || breadcrumbs.error || favorites.error)
-    throw new Error("Não foi possível carregar os detalhes da página.");
+  if (access.error || breadcrumbs.error || favorites.error) throw new Error(t("pages.detailsLoadFailed"));
   const editable = access.data === "owner" || access.data === "editor";
-  if (databaseResult.error) throw new Error("Não foi possível carregar os detalhes da base.");
+  if (databaseResult.error) throw new Error(t("database.detailsLoadFailed"));
   const database = z
     .strictObject({ databaseId: z.uuid(), isContainer: z.boolean(), isTemplate: z.boolean() })
     .nullable()
@@ -63,7 +66,7 @@ export default async function PageDocument({
   let publicProperties: { id: string; name: string }[] = [];
   if (database?.isContainer && access.data === "owner") {
     const schema = await client.rpc("get_database_metadata", { p_database_id: database.databaseId });
-    if (schema.error) throw new Error("Não foi possível carregar os campos da base.");
+    if (schema.error) throw new Error(t("database.fieldsLoadFailed"));
     publicProperties = z
       .object({ properties: z.array(z.object({ id: z.uuid(), name: z.string().max(120) })).max(500) })
       .parse(schema.data).properties;
@@ -84,12 +87,13 @@ export default async function PageDocument({
       />
       <div className="page-toolbar">
         {access.data === "owner" && <ShareControl pageId={pageId} properties={publicProperties} />}
+        <ImportExportControl workspaceId={workspaceId} pageId={pageId} />
         <span className="notice">
           {editable
-            ? "Você pode editar esta página"
+            ? t("pages.canEdit")
             : access.data === "commenter"
-              ? "Você pode ler e comentar"
-              : "Somente leitura"}
+              ? t("pages.canComment")
+              : t("common.readonly")}
         </span>
         <FavoriteButton
           key={`${pageId}-${Boolean(favorites.data)}`}
@@ -100,13 +104,13 @@ export default async function PageDocument({
       </div>
       {editable ? (
         <>
-          <h1 className="sr-only">{page.title || "Página sem título"}</h1>
+          <h1 className="sr-only">{page.title || t("pages.untitled")}</h1>
           <PageMetadataForm page={page} workspaceId={workspaceId} focusTitle={query.new === "1"} />
         </>
       ) : (
         <h1 className="readonly-page-title">
           {page.icon && <span aria-hidden="true">{page.icon} </span>}
-          {page.title || "Página sem título"}
+          {page.title || t("pages.untitled")}
         </h1>
       )}
       {database?.isContainer && <DatabaseClient databaseId={database.databaseId} workspaceId={workspaceId} />}
@@ -128,7 +132,7 @@ export default async function PageDocument({
       <CommentsPanel key={`comments:${pageId}`} pageId={pageId} />
       <section className="page-children">
         <div className="section-heading">
-          <h2>Subpáginas</h2>
+          <h2>{t("pages.subpages")}</h2>
           {editable && <CreatePageControl workspaceId={workspaceId} parentId={pageId} />}
           {editable && <CreateDatabaseControl workspaceId={workspaceId} parentId={pageId} />}
         </div>
@@ -138,19 +142,19 @@ export default async function PageDocument({
             className="pagination-link"
             href={`?${new URLSearchParams({ afterPosition: last.position, afterId: last.id })}`}
           >
-            Próximas subpáginas
+            {t("pages.nextSubpages")}
           </Link>
         )}
       </section>
       {editable && (
         <details className="page-organization">
-          <summary>Organizar página</summary>
+          <summary>{t("pages.organize")}</summary>
           <section className="section">
-            <h2>Mover para outro lugar</h2>
+            <h2>{t("pages.moveElsewhere")}</h2>
             <MovePageForm key={pageId} page={page} workspaceId={workspaceId} />
           </section>
           <section className="section">
-            <h2>Mover para a lixeira</h2>
+            <h2>{t("pages.moveToTrash")}</h2>
             <TrashPageForm page={page} workspaceId={workspaceId} />
           </section>
         </details>

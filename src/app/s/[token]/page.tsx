@@ -1,14 +1,18 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { publicationToken, publicPageSchema } from "@/features/sharing/model";
-import { PublicPageDocument } from "@/features/sharing/public-page";
+import { PublishedDocument } from "@/features/sharing/public-content-client";
+import { getTranslations } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-export const metadata = {
-  title: "Página compartilhada · Bloco",
-  robots: { index: false, follow: false, nocache: true },
-};
+export async function generateMetadata() {
+  const t = await getTranslations();
+  return {
+    title: t("sharing.pageTitle"),
+    robots: { index: false, follow: false, nocache: true },
+  };
+}
 export default async function PublishedPage({
   params,
   searchParams,
@@ -16,6 +20,8 @@ export default async function PublishedPage({
   params: Promise<{ token: string }>;
   searchParams: Promise<{ after?: string }>;
 }) {
+  const t = await getTranslations();
+
   const token = publicationToken.safeParse((await params).token);
   if (!token.success) notFound();
   const query = await searchParams,
@@ -29,10 +35,8 @@ export default async function PublishedPage({
   if (result.error?.code === "54000")
     return (
       <main className="public-page">
-        <h1>Esta publicação excede o tamanho disponível.</h1>
-        <p>
-          O conteúdo foi preservado. Peça ao proprietário para dividir a página publicada em páginas menores.
-        </p>
+        <h1>{t("sharing.tooLarge")}</h1>
+        <p>{t("sharing.preservedLarge")}</p>
       </main>
     );
   if (result.error || !result.data) notFound();
@@ -40,9 +44,9 @@ export default async function PublishedPage({
   if (!parsed.success)
     return (
       <main className="public-page">
-        <h1>Publicação temporariamente indisponível.</h1>
-        <p>Tente atualizar esta página em instantes.</p>
+        <h1>{t("sharing.temporary")}</h1>
+        <p>{t("sharing.refreshSoon")}</p>
       </main>
     );
-  return <PublicPageDocument data={parsed.data} token={token.data} />;
+  return <PublishedDocument data={parsed.data} token={token.data} />;
 }

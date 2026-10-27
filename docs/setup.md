@@ -132,7 +132,7 @@ O workflow versionado em `.github/workflows/ci.yml` reproduz os gates no Ubuntu 
 
 ### Conteúdo por blocos
 
-O build compila o validador isolado para `.editor-runtime/validation-worker.mjs`; desenvolvimento mantém esse arquivo atualizado junto ao Next. O artefato é ignorado pelo Git e incluído no tracing da rota de documentos. Use o build completo ao preparar o pacote; copiar apenas os fontes da rota não inclui seu validador.
+O build compila o validador isolado para `.editor-runtime/validation-worker.mjs`; desenvolvimento mantém esse arquivo atualizado junto ao Next. O artefato é ignorado pelo Git e incluído no tracing das rotas de documentos, databases e intercâmbio. Use o build completo ao preparar o pacote; copiar apenas os fontes da rota não inclui seu validador.
 
 O salvamento transmite deltas Yjs de até 256 KiB, com identidade de operação e confirmação durável. O bootstrap divide a leitura por revisão em chunks de 512 KiB. A validação limita estado e projeção a 8 MiB cada; duas gravações podem ler/validar/confirmar simultaneamente por instância, com oito aguardando. Excesso recebe erro recuperável, sem descartar o rascunho. A sessão de edição oferece retry e cópia do texto pendente; fechar abruptamente a aba antes da confirmação ainda pode perder esse rascunho em memória.
 
@@ -150,3 +150,7 @@ Depois de compilar o runtime, `pnpm test:perf:editor` verifica o limite de três
 - **E-mail não chegou externamente:** no desenvolvimento, procure no Mailpit. No projeto hospedado, verifique remetente, SMTP e limites no Supabase.
 
 Para parar o ambiente local, execute `pnpm supabase stop`. Isso não encerra o Docker Desktop nem altera aplicativos instalados de referência.
+
+## Publicação e uso
+
+O [guia de uso](user-guide.md) apresenta escrita, bases, colaboração e intercâmbio. Para hospedar, siga [deploy](deploy.md) e [operação/recuperação](operations.md). Mantenha limite global Storage de 50 MiB para ZIPs e limite próprio de 25 MiB no bucket de anexos; mudanças dessa configuração local exigem reiniciar apenas a stack pretendida, preservando seus volumes. Não reinicie ou resete a stack pessoal como parte dos testes.

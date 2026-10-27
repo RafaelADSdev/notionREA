@@ -11,6 +11,7 @@ A implementação usa pacotes públicos fixados em `package.json` e `pnpm-lock.y
 | Arraste acessível | dnd-kit React e DOM | MIT |
 | Validação | Zod | MIT |
 | Estilos | Tailwind CSS | MIT |
+| Intercâmbio | marked e yauzl | MIT |
 
 As versões exatas estão no manifesto/lockfile; evitar duplicá-las em outra fonte editável. [TipTap](https://github.com/ueberdosis/tiptap/blob/main/LICENSE.md), [Yjs](https://github.com/yjs/yjs/blob/main/LICENSE), [Supabase JS](https://github.com/supabase/supabase-js/blob/master/LICENSE) e [Next.js](https://github.com/vercel/next.js/blob/canary/license.md) publicam suas licenças. Nenhuma extensão comercial do editor foi instalada.
 

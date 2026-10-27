@@ -1,10 +1,12 @@
 "use client";
+
 import { useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { type DatabaseView, parseView, type ViewType, viewTypes } from "../model";
 import type { DatabaseData, SavedDatabaseView, ViewConfiguration } from "../types";
 import { DatabaseDialog } from "./database-dialog";
 import type { RunCommand } from "./database-value";
-import { VIEW_LABELS } from "./value-utils";
+import { viewLabels } from "./value-utils";
 
 export function ViewDialog({
   data,
@@ -19,8 +21,11 @@ export function ViewDialog({
   run: RunCommand;
   onClose: () => void;
 }) {
+  const t = useTranslations();
+  const VIEW_LABELS = viewLabels(t);
+
   const [name, setName] = useState(
-    source ? `${source.name}${duplicate ? " (cópia)" : ""}` : "Nova visualização",
+    source ? `${source.name}${duplicate ? t("database.copySuffix") : ""}` : t("database.newView"),
   );
   const [type, setType] = useState<ViewType>(source?.type ?? "table");
   const [visible, setVisible] = useState(
@@ -47,7 +52,9 @@ export function ViewDialog({
   };
   return (
     <DatabaseDialog
-      title={source ? (duplicate ? "Duplicar visualização" : "Editar visualização") : "Nova visualização"}
+      title={
+        source ? (duplicate ? t("database.duplicateView") : t("database.editView")) : t("database.newView")
+      }
       onClose={onClose}
     >
       <form
@@ -78,9 +85,9 @@ export function ViewDialog({
                 expectedRevision: source && !duplicate ? source.revision : 0,
               });
               if (result.ok) onClose();
-              else setError("Não foi possível salvar a visualização. Atualize os dados e tente novamente.");
+              else setError(t("database.saveViewFailed"));
             } catch {
-              setError("Confira o nome, o agrupamento e a propriedade de data desta visualização.");
+              setError(t("database.checkView"));
             } finally {
               setPending(false);
             }
@@ -89,11 +96,11 @@ export function ViewDialog({
         }}
       >
         <label>
-          Nome da visualização
+          {t("database.viewName")}
           <input required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} />
         </label>
         <label>
-          Tipo
+          {t("common.type")}
           <select
             value={type}
             onChange={(event) => {
@@ -110,13 +117,15 @@ export function ViewDialog({
         </label>
         {type !== "calendar" && (
           <label>
-            Agrupar por
+            {t("database.groupBy")}
             <select
               value={group}
               required={type === "board"}
               onChange={(event) => setGroup(event.target.value)}
             >
-              <option value="">{type === "board" ? "Escolha Seleção ou Checkbox" : "Sem agrupamento"}</option>
+              <option value="">
+                {type === "board" ? t("database.chooseBoardGrouping") : t("database.noGrouping")}
+              </option>
               {groups.map((property) => (
                 <option key={property.id} value={property.id}>
                   {property.name}
@@ -125,14 +134,12 @@ export function ViewDialog({
             </select>
           </label>
         )}
-        {type === "board" && !groups.length && (
-          <p>Crie uma propriedade de Seleção ou Checkbox nas propriedades da base para montar o board.</p>
-        )}
+        {type === "board" && !groups.length && <p>{t("database.createBoardProperty")}</p>}
         {type === "calendar" && (
           <label>
-            Propriedade de data
+            {t("database.dateProperty")}
             <select required value={date} onChange={(event) => setDate(event.target.value)}>
-              <option value="">Escolha uma data</option>
+              <option value="">{t("database.chooseDate")}</option>
               {data.properties
                 .filter((property) => property.type === "date")
                 .map((property) => (
@@ -144,7 +151,7 @@ export function ViewDialog({
           </label>
         )}
         <fieldset>
-          <legend>Propriedades visíveis</legend>
+          <legend>{t("database.visibleProperties")}</legend>
           {data.properties.map((property) => (
             <label key={property.id}>
               <input
@@ -165,11 +172,11 @@ export function ViewDialog({
         <ol className="db-property-order">
           {visible.map((id, index) => (
             <li key={id}>
-              {data.properties.find((property) => property.id === id)?.name ?? "Propriedade removida"}
+              {data.properties.find((property) => property.id === id)?.name ?? t("database.removedProperty")}
               <button
                 type="button"
                 disabled={index === 0}
-                aria-label={`Subir coluna ${index + 1}`}
+                aria-label={t("database.movePropertyUp", { number: index + 1 })}
                 onClick={() => move(index, -1)}
               >
                 ↑
@@ -177,7 +184,7 @@ export function ViewDialog({
               <button
                 type="button"
                 disabled={index === visible.length - 1}
-                aria-label={`Descer coluna ${index + 1}`}
+                aria-label={t("database.movePropertyDown", { number: index + 1 })}
                 onClick={() => move(index, 1)}
               >
                 ↓
@@ -188,10 +195,10 @@ export function ViewDialog({
         {error && <p role="alert">{error}</p>}
         <div className="db-actions">
           <button disabled={pending} type="submit">
-            Salvar visualização
+            {t("database.saveView")}
           </button>
           <button type="button" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </button>
         </div>
       </form>

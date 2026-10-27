@@ -12,18 +12,18 @@ colors:
   copper-dark: "#e9ab87"
   error: "#9d2727"
   error-dark: "#ffb2ae"
-  paper: "#f7f3ea"
-  surface: "#fffdf8"
-  panel: "#eeeae1"
-  ink: "#252c3b"
-  muted: "#5d625f"
-  line: "#d7d7ce"
-  paper-dark: "#131d29"
-  surface-dark: "#182534"
-  panel-dark: "#1d2c3c"
-  ink-dark: "#edf1f5"
-  muted-dark: "#b3c1cc"
-  line-dark: "#3b4e60"
+  paper: "#ffffff"
+  surface: "#fcfcfb"
+  panel: "#f5f5f3"
+  ink: "#30322f"
+  muted: "#686b65"
+  line: "#e5e6e2"
+  paper-dark: "#202120"
+  surface-dark: "#262725"
+  panel-dark: "#292a28"
+  ink-dark: "#ededeb"
+  muted-dark: "#b0b3ab"
+  line-dark: "#41433e"
   focus-dark: "#c4d0ff"
   editor-green: "#255d44"
   editor-green-dark: "#b1d9c7"
@@ -201,7 +201,7 @@ O M3 estabelece corpo de escrita com entrelinha própria e títulos de bloco em 
 
 ## Composição
 
-A estrutura usa navegação lateral recolhível (256px), barra de contexto com altura mínima (72px) e área principal limitada (1280px). O conteúdo recebe respiro fluido nas laterais; formulários mantêm grupos próximos e seções separadas. O conjunto de espaçamentos registrado é recorrente, não uma grade universal de múltiplos de quatro.
+A estrutura usa navegação lateral recolhível (240px), barra de contexto com altura mínima (56px) e área principal limitada (1120px). O conteúdo recebe respiro fluido nas laterais; formulários mantêm grupos próximos e seções separadas. O conjunto de espaçamentos registrado é recorrente, não uma grade universal de múltiplos de quatro.
 
 A autenticação combina painel de marca e formulário limitado (392px). Abaixo do limite móvel (800px), o painel lateral desaparece, a marca acompanha o formulário e o conteúdo ocupa uma coluna. O workspace também passa a uma coluna; a navegação abre em diálogo lateral (até 300px ou 85vw). Tabelas preservam as colunas com rolagem horizontal. Formulários em linha quebram linha; suas ações principais passam à largura disponível no móvel.
 
@@ -321,3 +321,7 @@ O diálogo de compartilhamento organiza acesso, membros e publicação em seçõ
 - **Não confunda** salvamento pendente na sessão com garantia de modo offline ou rascunho persistente após fechar o navegador.
 
 Não canonizados: o título ampliado em fonte de sistema da lateral de autenticação, o espaçamento pontual entre letras da marca (-0.045em), o glifo de exclamação do callout, o rótulo acima do título da base e o glifo do fallback de galeria não viram padrões reutilizáveis; são desvios do piso de acabamento para voz de destaque, espaçamento, rótulo introdutório e iconografia. A família operacional aprovada permanece registrada para títulos de trabalho, corpo e controles; letras de formatação são abreviações do comando.
+
+## Refinamento centrado no documento
+
+A ADR-039 registra o pedido posterior de aproximação visual. O documento mede até 820px e as bases preservam largura ampla. O ícone fica acima do título de 42px/700 no desktop; controles e avisos têm tratamento discreto. O editor alinha o texto ao título, com ações na margem reveladas por hover, foco, seleção ou menu aberto. Em telas estreitas os controles continuam visíveis no fluxo reservado. Marca, ícones, acentos e implementação permanecem originais.

@@ -1,10 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@/lib/supabase/server";
 import { uuidSchema } from "@/features/auth/validation";
 import { childrenOf } from "@/features/pages/queries";
+import { getTranslations } from "@/lib/i18n/server";
+import { currentUser } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
-  if (!(await currentUser())) return NextResponse.json({ error: "Entre novamente." }, { status: 401 });
+  const t = await getTranslations();
+
+  if (!(await currentUser())) return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401 });
   const workspace = uuidSchema.safeParse(request.nextUrl.searchParams.get("workspaceId"));
   const parentValue = request.nextUrl.searchParams.get("parentId");
   const parent = parentValue ? uuidSchema.safeParse(parentValue) : null;
@@ -16,7 +19,7 @@ export async function GET(request: NextRequest) {
     (afterId && !uuidSchema.safeParse(afterId).success) ||
     (afterPosition && !/^[A-Za-z0-9]{1,128}$/.test(afterPosition))
   )
-    return NextResponse.json({ error: "Consulta inválida." }, { status: 400 });
+    return NextResponse.json({ error: t("errors.invalidQuery") }, { status: 400 });
   try {
     return NextResponse.json(
       await childrenOf(
@@ -28,6 +31,6 @@ export async function GET(request: NextRequest) {
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch {
-    return NextResponse.json({ error: "Não foi possível carregar as páginas." }, { status: 403 });
+    return NextResponse.json({ error: t("pages.loadFailed") }, { status: 403 });
   }
 }

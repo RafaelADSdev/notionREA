@@ -2,16 +2,11 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef } from "react";
-import { signIn, signUp, requestPasswordReset, updatePassword, signInGoogle } from "./actions";
+import { useTranslations } from "@/lib/i18n/client";
 import type { ActionState } from "./action-state";
+import { requestPasswordReset, signIn, signInGoogle, signUp, updatePassword } from "./actions";
 
 const actions = { login: signIn, register: signUp, forgot: requestPasswordReset, reset: updatePassword };
-const labels = {
-  login: "Entrar",
-  register: "Criar conta",
-  forgot: "Enviar link",
-  reset: "Salvar nova senha",
-};
 
 export function AuthForm({
   mode,
@@ -22,6 +17,14 @@ export function AuthForm({
   next?: string;
   googleEnabled?: boolean;
 }) {
+  const t = useTranslations();
+
+  const labels = {
+    login: t("auth.signIn"),
+    register: t("auth.createAccount"),
+    forgot: t("auth.sendLink"),
+    reset: t("auth.savePassword"),
+  };
   const [state, action, pending] = useActionState<ActionState, FormData>(actions[mode], {});
   const [googleState, googleAction, googlePending] = useActionState(signInGoogle, {});
   const feedback = useRef<HTMLDivElement>(null);
@@ -34,12 +37,12 @@ export function AuthForm({
         <input type="hidden" name="next" value={next} />
         {mode !== "reset" && (
           <label className="field">
-            E-mail
+            {t("common.email")}
             <input
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="voce@exemplo.com"
+              placeholder={t("auth.emailPlaceholder")}
               required
               maxLength={254}
             />
@@ -47,7 +50,7 @@ export function AuthForm({
         )}
         {mode !== "forgot" && (
           <div className="field">
-            <label htmlFor="password">{mode === "reset" ? "Nova senha" : "Senha"}</label>
+            <label htmlFor="password">{mode === "reset" ? t("auth.newPassword") : t("auth.password")}</label>
             <input
               id="password"
               name="password"
@@ -58,14 +61,12 @@ export function AuthForm({
               maxLength={128}
               aria-describedby={mode === "login" ? undefined : "password-hint"}
             />
-            {mode !== "login" && (
-              <small id="password-hint">Entre 12 e 128 caracteres. Use uma senha exclusiva.</small>
-            )}
+            {mode !== "login" && <small id="password-hint">{t("auth.passwordHint")}</small>}
           </div>
         )}
         {mode === "reset" && (
           <label className="field">
-            Repita a nova senha
+            {t("auth.repeatPassword")}
             <input
               name="passwordConfirmation"
               type="password"
@@ -87,18 +88,18 @@ export function AuthForm({
           </div>
         )}
         <button type="submit" className="button" disabled={pending}>
-          {pending ? "Aguarde…" : labels[mode]}
+          {pending ? t("common.wait") : labels[mode]}
         </button>
       </form>
       {mode === "login" && (
         <>
           <div className="form-links">
-            <Link href="/forgot-password">Esqueci minha senha</Link>
-            <Link href="/register">Criar uma conta</Link>
+            <Link href="/forgot-password">{t("auth.forgotPassword")}</Link>
+            <Link href="/register">{t("auth.createAnAccount")}</Link>
           </div>
           {googleEnabled && (
             <>
-              <div className="form-divider">ou</div>
+              <div className="form-divider">{t("common.or")}</div>
               <form action={googleAction}>
                 <button
                   type="submit"
@@ -106,7 +107,7 @@ export function AuthForm({
                   style={{ width: "100%" }}
                   disabled={googlePending}
                 >
-                  {googlePending ? "Abrindo…" : "Continuar com Google"}
+                  {googlePending ? t("common.opening") : t("auth.continueGoogle")}
                 </button>
                 {googleState.error && (
                   <p role="alert" className="form-feedback error">
@@ -120,7 +121,7 @@ export function AuthForm({
       )}
       {mode !== "login" && (
         <p className="form-footer">
-          <Link href="/login">Voltar para entrar</Link>
+          <Link href="/login">{t("auth.backToSignIn")}</Link>
         </p>
       )}
     </>

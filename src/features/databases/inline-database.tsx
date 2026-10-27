@@ -1,5 +1,7 @@
 "use client";
+
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { CreateDatabaseControl } from "./create-control";
 import { DatabaseClient } from "./database-client";
 import type { DatabaseReference } from "./types";
@@ -20,6 +22,8 @@ export function InlineDatabase({
   editable: boolean;
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations();
+
   const [choosing, setChoosing] = useState(false);
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<DatabaseReference[]>([]);
@@ -37,12 +41,12 @@ export function InlineDatabase({
         cache: "no-store",
       });
       const result: { items: DatabaseReference[]; nextCursor: string | null } = await response.json();
-      if (!response.ok) throw new Error("Não foi possível buscar as bases.");
+      if (!response.ok) throw new Error(t("database.searchBasesFailed"));
       setItems((previous) => (after ? [...previous, ...result.items] : result.items));
       setCursor(result.nextCursor);
       setError("");
     },
-    [workspaceId],
+    [workspaceId, t],
   );
   useEffect(() => {
     if (!choosing) return;
@@ -50,7 +54,7 @@ export function InlineDatabase({
     const timer = setTimeout(
       () =>
         void load(query, undefined, abort.signal).catch(() => {
-          if (!abort.signal.aborted) setError("Não foi possível buscar as bases.");
+          if (!abort.signal.aborted) setError(t("database.searchBasesFailed"));
         }),
       200,
     );
@@ -58,7 +62,7 @@ export function InlineDatabase({
       abort.abort();
       clearTimeout(timer);
     };
-  }, [choosing, query, load]);
+  }, [choosing, query, load, t]);
   return (
     <div className="db-inline">
       {databaseId ? (
@@ -69,16 +73,16 @@ export function InlineDatabase({
           {...(viewId ? { viewId } : {})}
         />
       ) : (
-        <p>Escolha uma base para mostrar neste bloco.</p>
+        <p>{t("database.chooseInline")}</p>
       )}
       {editable && (
         <button type="button" onClick={() => setChoosing(true)}>
-          {databaseId ? "Trocar referência de base" : "Escolher ou criar base de dados"}
+          {databaseId ? t("database.replaceReference") : t("database.chooseOrCreate")}
         </button>
       )}
       {choosing && (
-        <DatabaseDialog title="Base de dados inline" onClose={() => setChoosing(false)}>
-          <p>Uma referência mostra os mesmos registros e respeita o acesso da base original.</p>
+        <DatabaseDialog title={t("editor.inlineDatabase")} onClose={() => setChoosing(false)}>
+          <p>{t("database.referenceNotice")}</p>
           <CreateDatabaseControl
             workspaceId={workspaceId}
             parentId={pageId}
@@ -88,7 +92,7 @@ export function InlineDatabase({
             }}
           />
           <label>
-            Buscar base existente
+            {t("database.searchExisting")}
             <input value={query} maxLength={200} onChange={(event) => setQuery(event.target.value)} />
           </label>
           {error && <p role="alert">{error}</p>}
@@ -102,20 +106,18 @@ export function InlineDatabase({
                     setChoosing(false);
                   }}
                 >
-                  {item.label || "Base sem título"}
+                  {item.label || t("database.untitledDatabase")}
                 </button>
               </li>
             ))}
           </ul>
-          {!items.length && !error && <p>Nenhuma base encontrada.</p>}
+          {!items.length && !error && <p>{t("database.noDatabases")}</p>}
           {cursor && (
             <button
               type="button"
-              onClick={() =>
-                void load(query, cursor).catch(() => setError("Não foi possível carregar mais bases."))
-              }
+              onClick={() => void load(query, cursor).catch(() => setError(t("database.moreBasesFailed")))}
             >
-              Carregar mais bases
+              {t("database.moreBases")}
             </button>
           )}
         </DatabaseDialog>

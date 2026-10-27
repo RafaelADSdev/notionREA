@@ -1,6 +1,8 @@
 "use client";
+
 import { useState, useTransition } from "react";
 import { z } from "zod";
+import { useTranslations } from "@/lib/i18n/client";
 import { RestorePageForm } from "./forms";
 
 export const trashItemSchema = z.object({
@@ -20,6 +22,8 @@ export function TrashList({
   initialItems: TrashItem[];
   initialMore: boolean;
 }) {
+  const t = useTranslations();
+
   const [items, setItems] = useState(initialItems);
   const [more, setMore] = useState(initialMore);
   const [query, setQuery] = useState("");
@@ -48,7 +52,7 @@ export function TrashList({
         setAppliedQuery(term);
         setError("");
       } catch {
-        setError("Não foi possível buscar na lixeira. Tente novamente.");
+        setError(t("pages.trashSearchFailed"));
       }
     });
   }
@@ -62,11 +66,11 @@ export function TrashList({
         }}
       >
         <label className="field">
-          Buscar na lixeira
+          {t("pages.searchTrash")}
           <input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={200} />
         </label>
         <button type="submit" className="button secondary" disabled={pending}>
-          Buscar
+          {t("common.search")}
         </button>
       </form>
       {error && (
@@ -75,18 +79,16 @@ export function TrashList({
         </p>
       )}
       {!items.length && (
-        <p className="notice">
-          {appliedQuery ? "Nenhuma página encontrada na lixeira." : "Sua lixeira está vazia."}
-        </p>
+        <p className="notice">{appliedQuery ? t("pages.trashSearchEmpty") : t("pages.trashEmpty")}</p>
       )}
       <div className="trash-list">
         {items.map((page) => (
-          <article className="trash-item" key={page.id} aria-label={page.title || "Página sem título"}>
-            <h2>{page.title || "Página sem título"}</h2>
+          <article className="trash-item" key={page.id} aria-label={page.title || t("pages.untitled")}>
+            <h2>{page.title || t("pages.untitled")}</h2>
             <p className="notice">
-              Removida em{" "}
+              {t("pages.removedOn")}{" "}
               <time dateTime={page.deleted_at}>
-                {new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeZone: "UTC" }).format(
+                {new Intl.DateTimeFormat(t.locale, { dateStyle: "medium", timeZone: "UTC" }).format(
                   new Date(page.deleted_at),
                 )}
               </time>
@@ -97,7 +99,7 @@ export function TrashList({
       </div>
       {more && (
         <button type="button" className="button secondary" disabled={pending} onClick={() => load(true)}>
-          Mais páginas da lixeira
+          {t("pages.moreTrash")}
         </button>
       )}
     </>

@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient, currentUser } from "@/lib/supabase/server";
+import { z } from "zod";
 import { uuidSchema } from "@/features/auth/validation";
 import { pageSummarySchema } from "@/features/pages/model/validation";
 import { PageList } from "@/features/pages/page-list";
-import { z } from "zod";
+import { getTranslations } from "@/lib/i18n/server";
+import { createClient, currentUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Favoritos" };
+export async function generateMetadata() {
+  const t = await getTranslations();
+  return { title: t("navigation.favorites") };
+}
 export default async function FavoritesPage({
   params,
   searchParams,
@@ -14,6 +18,8 @@ export default async function FavoritesPage({
   params: Promise<{ workspaceId: string }>;
   searchParams: Promise<{ afterId?: string }>;
 }) {
+  const t = await getTranslations();
+
   const user = await currentUser();
   if (!user) redirect("/login");
   const { workspaceId } = await params;
@@ -28,17 +34,17 @@ export default async function FavoritesPage({
     .limit(51);
   if (after && uuidSchema.safeParse(after).success) query = query.gt("page_id", after);
   const { data: favorites, error } = await query;
-  if (error) throw new Error("Não foi possível carregar os favoritos.");
+  if (error) throw new Error(t("pages.favoritesFailed"));
   const ids = favorites.slice(0, 50).map((favorite) => favorite.page_id);
   const pages = ids.length
     ? await client.from("pages").select("id,title,icon,position,revision").in("id", ids).order("id")
     : { data: [], error: null };
-  if (pages.error) throw new Error("Não foi possível carregar as páginas favoritas.");
+  if (pages.error) throw new Error(t("pages.favoritePagesFailed"));
   return (
     <>
       <div className="document-heading">
-        <h1>Favoritos</h1>
-        <p>As páginas que você quer ter sempre por perto. Favoritar não muda quem pode acessá-las.</p>
+        <h1>{t("navigation.favorites")}</h1>
+        <p>{t("pages.favoritesDescription")}</p>
       </div>
       <PageList
         pages={z
@@ -49,7 +55,7 @@ export default async function FavoritesPage({
       />
       {favorites.length > 50 && (
         <Link className="pagination-link" href={`?afterId=${ids.at(-1)}`}>
-          Próximos favoritos
+          {t("pages.nextFavorites")}
         </Link>
       )}
     </>

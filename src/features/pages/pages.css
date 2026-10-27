@@ -157,8 +157,8 @@
   background: var(--surface);
 }
 .tree-row a[aria-current="page"] {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--line);
+  color: var(--ink);
 }
 .tree-more {
   font-size: 12px;
@@ -262,7 +262,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 16px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -297,39 +297,49 @@
   align-items: center;
   gap: 16px;
   margin-block: 14px;
+  flex-wrap: wrap;
+}
+.page-toolbar > .notice {
+  margin: 0;
+  flex: 1;
+}
+.page-toolbar .favorite-button {
+  margin-inline-start: auto;
 }
 .page-metadata {
-  margin-bottom: 48px;
+  margin-bottom: 20px;
 }
 .page-title-row {
   display: flex;
-  align-items: start;
-  gap: 20px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
 }
 .page-icon-field {
   font-size: 11px;
   color: var(--muted);
   display: grid;
   gap: 4px;
-  flex: 0 0 66px;
+  flex: 0 0 auto;
 }
 .page-icon-field input {
   width: 66px;
-  height: 64px;
+  height: 56px;
   padding: 8px;
-  font-size: 28px;
+  font-size: 36px;
+  border-color: transparent;
+  background: transparent;
   text-align: center;
 }
 .page-title-field {
-  flex: 1;
+  width: 100%;
   min-width: 0;
-  padding-top: 18px;
 }
 .page-title-field input {
   width: 100%;
   min-height: 66px;
   font-size: clamp(26px, 4vw, 42px);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.03em;
   padding: 8px 0;
@@ -352,10 +362,16 @@
   justify-content: space-between;
   gap: 16px;
   align-items: center;
-  margin-top: 16px;
+  margin-top: 4px;
+}
+.page-save-row > .notice {
+  margin: 0;
 }
 .page-save-row + .form-feedback {
-  margin-top: 16px;
+  margin-top: 8px;
+  background: transparent;
+  padding: 4px 0;
+  border: 0;
 }
 .page-children {
   margin-block: 40px 48px;
@@ -370,6 +386,26 @@
   padding: 10px 0;
   color: var(--muted);
   font-size: 14px;
+  width: fit-content;
+  border-radius: 7px;
+}
+.page-organization summary:hover {
+  color: var(--ink);
+}
+.page-organization > .section {
+  margin-top: 28px;
+  max-width: 620px;
+}
+.page-organization > .section + .section {
+  border-top: 1px solid var(--line);
+  padding-top: 28px;
+}
+.page-organization .notice,
+.trash-item .notice {
+  margin-top: 0;
+}
+.page-organization .form-stack > .button {
+  justify-self: start;
 }
 .page-organization .form-stack {
   max-width: 560px;
@@ -380,7 +416,7 @@
 }
 .checkbox-field {
   display: flex;
-  align-items: start;
+  align-items: center;
   gap: 10px;
   padding-block: 10px;
   min-height: 44px;
@@ -389,8 +425,10 @@
 .checkbox-field input {
   width: 20px;
   height: 20px;
-  flex-shrink: 0;
-  margin-top: 2px;
+  min-height: 20px;
+  flex: 0 0 20px;
+  margin: 0;
+  padding: 0;
   accent-color: var(--accent);
 }
 .page-cover {
@@ -398,7 +436,7 @@
   height: clamp(140px, 24vw, 260px);
   background-position: center;
   background-size: cover;
-  border-radius: 7px;
+  border-radius: 3px;
   background-color: var(--panel);
 }
 .cover-controls {
@@ -407,6 +445,9 @@
   gap: 12px;
   flex-wrap: wrap;
   margin-top: 14px;
+}
+.cover-controls .notice {
+  margin: 0;
 }
 .favorite-button[aria-pressed="true"] {
   color: var(--accent);
@@ -463,9 +504,52 @@
     font-size: 26px;
   }
   .page-save-row {
-    align-items: end;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .page-organization .form-stack > .button {
+    justify-self: stretch;
   }
   .command-dialog {
     margin-top: 24px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .page-title-field input,
+  .page-icon-field input {
+    transition:
+      background-color 160ms ease-out,
+      border-color 160ms ease-out;
+  }
+  .favorite-button svg,
+  .tree-expand svg {
+    transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .favorite-button[aria-pressed="true"] svg {
+    transform: rotate(-12deg) scale(1.08);
+  }
+  .page-organization[open] > .section {
+    animation: organization-reveal 180ms ease-out;
+  }
+  .page-metadata .form-feedback {
+    animation: page-feedback 180ms ease-out;
+  }
+  @keyframes organization-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes page-feedback {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 }

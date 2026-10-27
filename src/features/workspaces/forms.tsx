@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { createWorkspace, createInvitation, changeMember, acceptInvitation } from "./actions";
 import type { ActionState } from "@/features/auth/action-state";
+import { useTranslations } from "@/lib/i18n/client";
+import { acceptInvitation, changeMember, createInvitation, createWorkspace } from "./actions";
 
 function Feedback({ state }: { state: ActionState }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -22,33 +23,34 @@ function Feedback({ state }: { state: ActionState }) {
 }
 
 export function WorkspaceForm({ requestId }: { requestId: string }) {
+  const t = useTranslations();
+
   const [state, action, pending] = useActionState(createWorkspace, {});
   return (
     <form action={action} className="form-stack">
       <input type="hidden" name="requestId" value={requestId} />
       <label className="field">
-        Nome do workspace
+        {t("workspaces.name")}
         <input
           name="name"
           required
           maxLength={80}
-          placeholder="Por exemplo, Estúdio Horizonte"
+          placeholder={t("workspaces.namePlaceholder")}
           autoComplete="organization"
         />
       </label>
       <Feedback state={state} />
       <button type="submit" className="button" disabled={pending}>
-        {pending ? "Criando…" : "Criar workspace"}
+        {pending ? t("common.creating") : t("workspaces.create")}
       </button>
-      <p className="notice">
-        Você será o administrador. Administradores podem gerenciar os membros e todo o conteúdo deste
-        workspace.
-      </p>
+      <p className="notice">{t("workspaces.ownerNotice")}</p>
     </form>
   );
 }
 
 export function InvitationForm({ workspaceId }: { workspaceId: string }) {
+  const t = useTranslations();
+
   const [state, action, pending] = useActionState(createInvitation, {});
   const [copied, setCopied] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -67,18 +69,18 @@ export function InvitationForm({ workspaceId }: { workspaceId: string }) {
       <form action={action} className="inline-form">
         <input type="hidden" name="workspaceId" value={workspaceId} />
         <label className="field">
-          E-mail da pessoa
+          {t("workspaces.personEmail")}
           <input
             name="email"
             type="email"
             required
             maxLength={254}
-            placeholder="pessoa@exemplo.com"
+            placeholder={t("workspaces.personEmailPlaceholder")}
             autoComplete="off"
           />
         </label>
         <button type="submit" className="button" disabled={pending}>
-          {pending ? "Criando…" : "Criar convite"}
+          {pending ? t("common.creating") : t("workspaces.createInvite")}
         </button>
       </form>
       <div style={{ marginTop: 16 }}>
@@ -87,17 +89,17 @@ export function InvitationForm({ workspaceId }: { workspaceId: string }) {
       {state.invitationUrl && (
         <div className="invitation-link">
           <label className="field">
-            Link do convite
+            {t("workspaces.inviteLink")}
             <input
               ref={input}
-              aria-label="Link do convite"
+              aria-label={t("workspaces.inviteLink")}
               readOnly
               value={state.invitationUrl}
               onFocus={(event) => event.currentTarget.select()}
             />
           </label>
           <button type="button" className="button quiet" onClick={copy} style={{ marginTop: 12 }}>
-            {copied ? "Link copiado" : "Copiar link"}
+            {copied ? t("common.linkCopied") : t("common.copyLink")}
           </button>
         </div>
       )}
@@ -116,24 +118,30 @@ export function MemberForm({
   email: string;
   role: string;
 }) {
+  const t = useTranslations();
+
   const [state, action, pending] = useActionState(changeMember, {});
   return (
     <>
       <form action={action} className="inline-form">
         <input type="hidden" name="workspaceId" value={workspaceId} />
         <input type="hidden" name="userId" value={userId} />
-        <select name="operation" defaultValue={role} aria-label={`Acesso de ${email}`}>
-          <option value="owner">Administrador</option>
-          <option value="member">Membro</option>
-          <option value="remove">Remover acesso</option>
+        <select
+          name="operation"
+          defaultValue={role}
+          aria-label={t("workspaces.memberAccessName", { name: email })}
+        >
+          <option value="owner">{t("common.administrator")}</option>
+          <option value="member">{t("common.member")}</option>
+          <option value="remove">{t("workspaces.removeAccess")}</option>
         </select>
         <button
           type="submit"
           className="button quiet"
           disabled={pending}
-          aria-label={`Salvar acesso de ${email}`}
+          aria-label={t("workspaces.saveMemberAccessName", { name: email })}
         >
-          {pending ? "Salvando…" : "Salvar"}
+          {pending ? t("common.saving") : t("common.save")}
         </button>
       </form>
       <Feedback state={state} />
@@ -142,13 +150,15 @@ export function MemberForm({
 }
 
 export function AcceptInvitationForm({ token }: { token: string }) {
+  const t = useTranslations();
+
   const [state, action, pending] = useActionState(acceptInvitation, {});
   return (
     <form action={action} className="form-stack">
       <input type="hidden" name="token" value={token} />
       <Feedback state={state} />
       <button className="button" type="submit" disabled={pending || !token}>
-        {pending ? "Confirmando…" : "Aceitar convite"}
+        {pending ? "Confirmando…" : t("workspaces.acceptInvite")}
       </button>
     </form>
   );

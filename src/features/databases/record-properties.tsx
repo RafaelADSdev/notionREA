@@ -1,6 +1,8 @@
 "use client";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import type {
   DatabaseCommand,
   DatabaseCommandResult,
@@ -22,13 +24,15 @@ export function RecordProperties({
   workspaceId: string;
   isTemplate: boolean;
 }) {
+  const t = useTranslations();
+
   const [record, setRecord] = useState<{ data: DatabaseData; row: DatabaseRow } | null>(null);
   const [error, setError] = useState("");
   const readRecord = useCallback(async (): Promise<{ data: DatabaseData; row: DatabaseRow }> => {
     const response = await fetch(`/api/databases/${databaseId}/records/${pageId}`, { cache: "no-store" });
-    if (!response.ok) throw new Error("Não foi possível carregar as propriedades.");
+    if (!response.ok) throw new Error(t("database.loadPropertiesFailed"));
     return response.json();
-  }, [databaseId, pageId]);
+  }, [databaseId, pageId, t]);
   const refresh = async () => {
     setRecord(await readRecord());
     setError("");
@@ -43,12 +47,12 @@ export function RecordProperties({
         }
       })
       .catch(() => {
-        if (active) setError("As propriedades estão indisponíveis. Seu conteúdo foi preservado.");
+        if (active) setError(t("database.propertiesPreserved"));
       });
     return () => {
       active = false;
     };
-  }, [readRecord]);
+  }, [readRecord, t]);
   const run = async (command: DatabaseCommand): Promise<DatabaseCommandResult> => {
     const response = await fetch(`/api/databases/${databaseId}`, {
       method: "POST",
@@ -56,7 +60,7 @@ export function RecordProperties({
       body: JSON.stringify(command),
     });
     const result: DatabaseCommandResult = await response.json();
-    if (!response.ok) return { ok: false, error: result.error ?? "Não foi possível salvar." };
+    if (!response.ok) return { ok: false, error: result.error ?? t("database.saveFailed") };
     if (result.ok) await refresh();
     return result;
   };
@@ -64,7 +68,7 @@ export function RecordProperties({
     url: string,
   ): Promise<{ items: DatabaseReference[]; nextCursor: string | null }> => {
     const response = await fetch(url, { cache: "no-store" });
-    if (!response.ok) throw new Error("Referências indisponíveis.");
+    if (!response.ok) throw new Error(t("database.referencesUnavailable"));
     return response.json();
   };
   return (
@@ -84,27 +88,25 @@ export function RecordProperties({
       >
         <section
           className="db-record-properties"
-          aria-label={isTemplate ? "Valores padrão do template" : "Propriedades do registro"}
+          aria-label={isTemplate ? t("database.templateDefaults") : t("database.recordProperties")}
         >
           {error && (
             <p role="alert">
               {error}
               <button
                 type="button"
-                onClick={() => void refresh().catch(() => setError("Propriedades indisponíveis."))}
+                onClick={() => void refresh().catch(() => setError(t("database.propertiesUnavailable")))}
               >
-                Tentar novamente
+                {t("common.tryAgain")}
               </button>
             </p>
           )}
           {record && (
             <>
               <p>
-                {isTemplate
-                  ? "Template: alterações serão usadas apenas em novos registros."
-                  : "Registro da base"}{" "}
+                {isTemplate ? t("database.templateDefaultsNotice") : t("database.recordDatabase")}{" "}
                 <Link href={`/w/${workspaceId}/p/${record.data.pageId}`}>
-                  {record.data.title || "Abrir base"}
+                  {record.data.title || t("database.openDatabase")}
                 </Link>
               </p>
               <dl className="db-record-fields">

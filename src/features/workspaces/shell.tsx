@@ -1,14 +1,15 @@
 "use client";
+import dynamic from "next/dynamic";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Brand, Icon } from "@/components/icon";
 import { SafeSignOut } from "@/features/editor/ui/safe-sign-out";
-import { PageSearch } from "@/features/pages/search";
-import { PageTree } from "@/features/pages/page-tree";
 import { CreatePageControl } from "@/features/pages/create-control";
-import dynamic from "next/dynamic";
+import { PageTree } from "@/features/pages/page-tree";
+import { PageSearch } from "@/features/pages/search";
+import { useTranslations } from "@/lib/i18n/client";
 
 const PendingDrafts = dynamic(() =>
   import("@/features/editor/ui/pending-drafts").then((module) => module.PendingDrafts),
@@ -30,6 +31,8 @@ export function WorkspaceShell({
   isOwner: boolean;
   children: React.ReactNode;
 }) {
+  const t = useTranslations();
+
   const path = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
@@ -51,14 +54,14 @@ export function WorkspaceShell({
     };
   }, [userId]);
   const label = isMembers
-    ? "Equipe"
+    ? t("navigation.team")
     : path.endsWith("/favorites")
-      ? "Favoritos"
+      ? t("navigation.favorites")
       : path.endsWith("/trash")
-        ? "Lixeira"
+        ? t("navigation.trash")
         : path.includes("/p/")
-          ? "Páginas"
-          : "Página inicial";
+          ? t("navigation.pages")
+          : t("navigation.home");
   function closeMobile() {
     sidebar.current?.close();
     setMobileOpen(false);
@@ -84,20 +87,20 @@ export function WorkspaceShell({
   const navigation = (
     <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Link href={home} aria-label="Bloco, página inicial">
+        <Link href={home} aria-label={t("navigation.brandHome")}>
           <Brand />
         </Link>
         <button
           type="button"
           className="icon-button mobile-menu"
           onClick={closeMobile}
-          aria-label="Fechar navegação"
+          aria-label={t("navigation.close")}
         >
           <Icon name="menu" />
         </button>
       </div>
       <div className="workspace-choice">
-        <label htmlFor="workspace-picker">Seu workspace</label>
+        <label htmlFor="workspace-picker">{t("navigation.yourWorkspace")}</label>
         <select
           id="workspace-picker"
           value={workspace.id}
@@ -113,7 +116,7 @@ export function WorkspaceShell({
           ))}
         </select>
       </div>
-      <nav className="nav-list" aria-label="Principal">
+      <nav className="nav-list" aria-label={t("navigation.main")}>
         <PageSearch
           key={workspace.id}
           workspaceId={workspace.id}
@@ -130,7 +133,7 @@ export function WorkspaceShell({
           onClick={() => setMobileOpen(false)}
         >
           <Icon name="home" />
-          Página inicial
+          {t("navigation.home")}
         </Link>
         <Link
           className="nav-link"
@@ -139,10 +142,10 @@ export function WorkspaceShell({
           onClick={() => setMobileOpen(false)}
         >
           <Icon name="people" />
-          Equipe
+          {t("navigation.team")}
         </Link>
       </nav>
-      <nav className="nav-list" aria-label="Organização">
+      <nav className="nav-list" aria-label={t("navigation.organization")}>
         <Link
           className="nav-link"
           href={`${home}/favorites`}
@@ -150,7 +153,7 @@ export function WorkspaceShell({
           onClick={() => setMobileOpen(false)}
         >
           <Icon name="star" />
-          Favoritos
+          {t("navigation.favorites")}
         </Link>
         <Link
           className="nav-link"
@@ -159,11 +162,11 @@ export function WorkspaceShell({
           onClick={() => setMobileOpen(false)}
         >
           <Icon name="trash" />
-          Lixeira
+          {t("navigation.trash")}
         </Link>
       </nav>
-      <section className="sidebar-section page-navigation" aria-label="Páginas do workspace">
-        <h2>Suas páginas</h2>
+      <section className="sidebar-section page-navigation" aria-label={t("navigation.workspacePages")}>
+        <h2>{t("navigation.yourPages")}</h2>
         <CreatePageControl compact workspaceId={workspace.id} onNavigate={closeMobile} />
         <PageTree
           key={workspace.id}
@@ -176,20 +179,20 @@ export function WorkspaceShell({
         />
       </section>
       <div className="sidebar-section">
-        <h2>Seus espaços</h2>
+        <h2>{t("navigation.yourSpaces")}</h2>
         <Link className="nav-link" href="/workspaces/new">
           <Icon name="plus" />
-          Novo workspace
+          {t("navigation.newWorkspace")}
         </Link>
         <Link className="nav-link" href="/workspaces">
-          Ver workspaces
+          {t("navigation.viewWorkspaces")}
         </Link>
       </div>
       <div className="sidebar-bottom">
         <div className="identity">
           <span className="avatar">{email.slice(0, 1).toUpperCase()}</span>
           <div className="identity-text">
-            <strong>{isOwner ? "Administrador" : "Membro"}</strong>
+            <strong>{isOwner ? t("common.administrator") : t("common.member")}</strong>
             {email}
           </div>
         </div>
@@ -204,7 +207,7 @@ export function WorkspaceShell({
           id="workspace-navigation"
           ref={sidebar}
           className="sidebar"
-          aria-label="Navegação do workspace"
+          aria-label={t("navigation.workspaceNavigation")}
           onCancel={(event) => {
             event.preventDefault();
             closeMobile();
@@ -213,7 +216,7 @@ export function WorkspaceShell({
           {navigation}
         </dialog>
       ) : (
-        <aside id="workspace-navigation" className="sidebar" aria-label="Navegação do workspace">
+        <aside id="workspace-navigation" className="sidebar" aria-label={t("navigation.workspaceNavigation")}>
           {navigation}
         </aside>
       )}
@@ -226,7 +229,7 @@ export function WorkspaceShell({
               onClick={() => setCollapsed(!collapsed)}
               aria-controls="workspace-navigation"
               aria-expanded={!collapsed}
-              aria-label={collapsed ? "Expandir navegação" : "Recolher navegação"}
+              aria-label={collapsed ? t("navigation.expand") : t("navigation.collapse")}
             >
               <Icon name="menu" />
             </button>
@@ -237,7 +240,7 @@ export function WorkspaceShell({
               onClick={() => setMobileOpen(true)}
               aria-expanded={mobileOpen}
               aria-controls="workspace-navigation"
-              aria-label="Abrir navegação"
+              aria-label={t("navigation.open")}
             >
               <Icon name="menu" />
             </button>
@@ -247,7 +250,7 @@ export function WorkspaceShell({
               <span>{label}</span>
             </div>
           </div>
-          <span className="workspace-label">Um espaço em construção conjunta.</span>
+          <span className="workspace-label">{t("navigation.collaborationTagline")}</span>
         </header>
         <PendingDrafts userId={userId} />
         <main id="main" ref={main} tabIndex={-1} className="workspace-main">

@@ -1,7 +1,7 @@
-import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
+import AxeBuilder from "@axe-core/playwright";
+import { expect, type Page, test } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../src/lib/supabase/database.types";
 
 const api = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -66,6 +66,33 @@ test.afterAll(async () => {
     const result = await admin.auth.admin.deleteUser(id);
     if (result.error) throw new Error("Synthetic editor account cleanup failed.");
   }
+});
+
+test("Backspace and Delete edit text without removing the block and persist after reload", async ({
+  page,
+}) => {
+  await setup(page);
+  await text(page).click();
+  await page.keyboard.type("Texto abc");
+  await page.keyboard.press("Backspace");
+  await expect(text(page)).toHaveText("Texto ab");
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("Delete");
+  await expect(text(page)).toHaveText("Texto a");
+  await page.keyboard.press("Home");
+  await page.keyboard.press("Shift+End");
+  await page.keyboard.press("Backspace");
+  await expect(text(page)).toHaveCount(1);
+  await expect(text(page)).toHaveText("");
+  await page.keyboard.type("A👨‍👩‍👧‍👦");
+  await page.keyboard.press("Backspace");
+  await expect(text(page)).toHaveText("A");
+  await page.keyboard.press("Backspace");
+  await expect(text(page)).toHaveText("");
+  await page.keyboard.type("Texto preservado");
+  await saved(page);
+  await page.reload();
+  await expect(text(page)).toHaveText("Texto preservado");
 });
 
 test("real writing, split, inline marks, undo and reload preserve the saved document", async ({ page }) => {

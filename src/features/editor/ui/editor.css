@@ -1,6 +1,5 @@
 .page-editor {
-  border-top: 1px solid var(--line);
-  padding-top: 16px;
+  padding-top: 0;
   margin-block: 0 48px;
   min-width: 0;
 }
@@ -17,7 +16,14 @@
 .editor-status {
   color: var(--muted);
   font-size: 12px;
-  min-height: 44px;
+  min-height: 28px;
+}
+.page-editor > .notice {
+  margin-block: 4px 12px;
+  font-size: 12px;
+}
+.editor-actions {
+  margin-bottom: 16px;
 }
 .editor-actions button,
 .editor-status button,
@@ -47,13 +53,21 @@
   align-items: center;
   gap: 2px;
   padding: 4px;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 7px;
-  background: var(--surface);
+  background: var(--panel);
   width: fit-content;
   max-width: 100%;
   overflow-x: auto;
   margin-block: 8px 20px;
+}
+.editor-actions > .editor-formatting-toolbar {
+  margin-block: 0;
+  align-items: end;
+}
+.editor-actions {
+  align-items: end;
+  margin-bottom: 20px;
 }
 .editor-format-button {
   flex-shrink: 0;
@@ -69,6 +83,15 @@
 .editor-format-button:hover {
   background: var(--accent-soft);
   color: var(--accent);
+}
+.editor-actions > button,
+.editor-actions .editor-format-button {
+  border-color: transparent;
+  background: transparent;
+}
+.editor-actions .editor-format-button:hover,
+.editor-actions .editor-format-button[aria-pressed="true"] {
+  background: var(--accent-soft);
 }
 .editor-format-button [data-format="bold"] {
   font-weight: 700;
@@ -149,11 +172,10 @@
 }
 [data-block-text]:focus-within {
   border-radius: 3px;
-  box-shadow: 0 0 0 1px var(--line);
 }
 .block-text p:only-child:empty::before,
 .block-text p:only-child:has(> .ProseMirror-trailingBreak:only-child)::before {
-  content: "Comece a escrever. Use / para adicionar um bloco.";
+  content: var(--block-placeholder);
   color: var(--muted);
   pointer-events: none;
 }
@@ -219,7 +241,7 @@
 }
 [data-block-type="code"] .block-text p:empty::before,
 [data-block-type="code"] .block-text p:has(> .ProseMirror-trailingBreak:only-child)::before {
-  content: "Escreva seu código aqui.";
+  content: var(--code-placeholder);
 }
 .code-token.code-keyword,
 .code-token.code-tag {
@@ -661,7 +683,7 @@ th.editor-table-cell {
 }
 .editor-block-controls {
   position: absolute;
-  inset-inline-start: 0;
+  inset-inline-start: -68px;
   top: 0;
   display: flex;
   z-index: 2;
@@ -689,7 +711,28 @@ th.editor-table-cell {
   color: var(--accent);
 }
 .editor-block:has(> .editor-block-controls) {
-  padding-inline-start: 68px;
+  padding-inline-start: 0;
+}
+@media (hover: hover) and (pointer: fine) and (min-width: 801px) {
+  .editor-block-controls {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .editor-block:hover > .editor-block-controls,
+  .editor-block:focus-within > .editor-block-controls,
+  .editor-block[data-selected="true"] > .editor-block-controls,
+  .editor-block:has(.editor-block-actions[open]) > .editor-block-controls {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+@media (max-width: 800px) {
+  .editor-block-controls {
+    inset-inline-start: 0;
+  }
+  .editor-block:has(> .editor-block-controls) {
+    padding-inline-start: 68px;
+  }
 }
 .editor-block-actions-panel {
   position: absolute;

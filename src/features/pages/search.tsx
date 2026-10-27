@@ -1,10 +1,13 @@
 "use client";
+import { useRouter } from "next/navigation";
+
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Icon } from "@/components/icon";
 import { readBoundedJson } from "@/lib/http";
+import { useTranslations } from "@/lib/i18n/client";
+import { createTranslator, DEFAULT_LOCALE, type Locale } from "@/lib/i18n/core";
 
 export const searchResultSchema = z.object({
   id: z.uuid(),
@@ -20,14 +23,16 @@ export async function findPages(
   query: string,
   signal?: AbortSignal,
   cursor?: { id: string; rank: number; updatedAt: string },
+  locale: Locale = DEFAULT_LOCALE,
 ) {
+  const t = createTranslator(locale);
   const response = await fetch("/api/pages/search", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ workspaceId, query, cursor }),
     ...(signal ? { signal } : {}),
   });
-  if (!response.ok) throw new Error("Não foi possível buscar. Confira sua conexão e tente novamente.");
+  if (!response.ok) throw new Error(t("pages.searchConnectionFailed"));
   return responseSchema.parse(await readBoundedJson(response, 128 * 1024));
 }
 
@@ -39,6 +44,8 @@ export function PageSearch({
   workspaceId: string;
   onNavigate?: (path: string) => void;
 }) {
+  const t = useTranslations();
+
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -103,7 +110,7 @@ export function PageSearch({
     const controller = new AbortController();
     const timer = setTimeout(() => {
       setBusy(true);
-      findPages(workspaceId, query, controller.signal)
+      findPages(workspaceId, query, controller.signal, undefined, t.locale)
         .then((result) => {
           setItems(result.items);
           setMore(result.more);
@@ -111,7 +118,7 @@ export function PageSearch({
         })
         .catch((reason: unknown) => {
           if (!controller.signal.aborted)
-            setError(reason instanceof Error ? reason.message : "Não foi possível buscar.");
+            setError(reason instanceof Error ? reason.message : t("pages.searchShortFailed"));
         })
         .finally(() => {
           if (!controller.signal.aborted) setBusy(false);
@@ -121,7 +128,7 @@ export function PageSearch({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [workspaceId, query, open]);
+  }, [workspaceId, query, open, t]);
   function choose(item: SearchResult) {
     close();
     const path = `/w/${workspaceId}/p/${item.id}`;
@@ -135,18 +142,19 @@ export function PageSearch({
         type="button"
         className="nav-link search-trigger"
         onClick={show}
-        aria-label="Buscar páginas"
+        aria-label={t("pages.search")}
         aria-keyshortcuts="Control+K Meta+K"
       >
         <Icon name="search" />
-        Buscar páginas<kbd>Ctrl K</kbd>
+        {t("pages.search")}
+        <kbd>Ctrl K</kbd>
       </button>
       {portalTarget &&
         createPortal(
           <dialog
             ref={dialog}
             className="command-dialog"
-            aria-label="Buscar páginas"
+            aria-label={t("pages.search")}
             onCancel={(event) => {
               event.stopPropagation();
               event.preventDefault();
@@ -156,12 +164,12 @@ export function PageSearch({
             <div className="command-input">
               <Icon name="search" />
               <label className="sr-only" htmlFor={`${listId}-input`}>
-                Buscar neste workspace
+                {t("pages.searchWorkspace")}
               </label>
               <input
                 ref={input}
                 id={`${listId}-input`}
-                placeholder="O que você está procurando?"
+                placeholder={t("pages.searchPlaceholder")}
                 value={query}
                 maxLength={200}
                 autoComplete="off"
@@ -189,19 +197,24 @@ export function PageSearch({
                   }
                 }}
               />
-              <button type="button" className="icon-button" aria-label="Fechar busca" onClick={close}>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={t("pages.closeSearch")}
+                onClick={close}
+              >
                 <Icon name="close" />
               </button>
             </div>
             <p className="command-hint">
-              {query.trim() ? "Resultados no seu workspace" : "Páginas recentes"}
-              {busy ? " · Buscando…" : ""}
+              {query.trim() ? t("pages.workspaceResults") : t("pages.recent")}
+              {busy ? t("pages.searchingSuffix") : ""}
             </p>
             <div
               id={listId}
               role="listbox"
               tabIndex={-1}
-              aria-label="Páginas encontradas"
+              aria-label={t("pages.found")}
               className="command-results"
             >
               {items.map((item, index) => (
@@ -217,17 +230,13 @@ export function PageSearch({
                   onFocus={() => setActive(index)}
                 >
                   <Icon name="document" />
-                  {item.title || "Página sem título"}
+                  {item.title || t("pages.untitled")}
                   <Icon name="arrow" />
                 </button>
               ))}
             </div>
             {!busy && !items.length && (
-              <p className="command-empty">
-                {query
-                  ? "Nenhuma página encontrada. Experimente outro termo."
-                  : "Suas páginas aparecerão aqui conforme você criar e editar."}
-              </p>
+              <p className="command-empty">{query ? t("pages.searchEmpty") : t("pages.recentEmpty")}</p>
             )}
             {error && (
               <p role="alert" className="form-feedback error">
@@ -244,24 +253,30 @@ export function PageSearch({
                   if (!last) return;
                   setBusy(true);
                   try {
-                    const result = await findPages(workspaceId, query, undefined, {
-                      id: last.id,
-                      rank: last.rank,
-                      updatedAt: last.updated_at,
-                    });
+                    const result = await findPages(
+                      workspaceId,
+                      query,
+                      undefined,
+                      {
+                        id: last.id,
+                        rank: last.rank,
+                        updatedAt: last.updated_at,
+                      },
+                      t.locale,
+                    );
                     setItems([...items, ...result.items]);
                     setMore(result.more);
                   } catch {
-                    setError("Não foi possível carregar mais resultados.");
+                    setError(t("pages.moreResultsFailed"));
                   } finally {
                     setBusy(false);
                   }
                 }}
               >
-                Mais resultados
+                {t("pages.moreResults")}
               </button>
             )}
-            <p className="command-hint">↑ ↓ para escolher · Enter para abrir · Esc para sair</p>
+            <p className="command-hint">{t("pages.searchKeys")}</p>
           </dialog>,
           portalTarget,
         )}

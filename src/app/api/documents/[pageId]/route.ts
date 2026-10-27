@@ -1,50 +1,55 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { currentUser } from "@/lib/supabase/server";
-import { getEnvironment } from "@/lib/env";
-import { PayloadLimitError, readBoundedBytes } from "@/lib/http";
 import {
   CONTENT_CHUNK_BYTES,
   MAX_CONTENT_BYTES,
   MAX_UPDATE_BYTES,
 } from "@/features/editor/model/content-limits";
 import {
+  DocumentRequestError,
   documentChunk,
   documentManifest,
-  DocumentRequestError,
   requireContentEditor,
   saveContentOperation,
 } from "@/features/editor/server/documents";
+import { getEnvironment } from "@/lib/env";
+import { PayloadLimitError, readBoundedBytes } from "@/lib/http";
+import { getTranslations } from "@/lib/i18n/server";
+import { currentUser } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 const headers = { "Cache-Control": "private, no-store" };
 type Context = { params: Promise<{ pageId: string }> };
-function failure(error: unknown) {
+async function failure(error: unknown) {
+  const t = await getTranslations();
+
   const status =
     error instanceof DocumentRequestError ? error.status : error instanceof PayloadLimitError ? 413 : 503;
   const message =
     status === 409
-      ? "O conteúdo mudou. Vamos atualizar e tentar novamente."
+      ? t("editor.contentChanged")
       : status === 413
-        ? "Esta alteração excede o tamanho permitido."
+        ? t("database.changeTooLarge")
         : status === 422
-          ? "Não foi possível validar o conteúdo. Seu rascunho continua nesta sessão."
+          ? t("editor.validationFailed")
           : status === 403 || status === 404
-            ? "Conteúdo indisponível para esta conta."
+            ? t("editor.accountUnavailable")
             : status === 429
-              ? "Muitas alterações. Aguarde um instante antes de tentar novamente."
-              : "Não foi possível concluir. Tente novamente.";
+              ? t("comments.rateLimit")
+              : t("errors.tryAgain");
   return NextResponse.json(
     { error: message },
     { status, headers: { ...headers, ...(status === 429 || status === 503 ? { "Retry-After": "5" } : {}) } },
   );
 }
 export async function GET(request: NextRequest, context: Context) {
+  const t = await getTranslations();
+
   if (!(await currentUser()))
-    return NextResponse.json({ error: "Entre novamente." }, { status: 401, headers });
+    return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401, headers });
   const page = z.uuid().safeParse((await context.params).pageId);
-  if (!page.success) return NextResponse.json({ error: "Página indisponível." }, { status: 404, headers });
+  if (!page.success) return NextResponse.json({ error: t("pages.unavailable") }, { status: 404, headers });
   try {
     const query = request.nextUrl.searchParams;
     if (!query.has("offset") && !query.has("revision"))
@@ -70,10 +75,12 @@ export async function GET(request: NextRequest, context: Context) {
   }
 }
 export async function POST(request: NextRequest, context: Context) {
+  const t = await getTranslations();
+
   if (request.headers.get("origin") !== new URL(getEnvironment().APP_URL).origin)
-    return NextResponse.json({ error: "Origem inválida." }, { status: 403, headers });
+    return NextResponse.json({ error: t("errors.invalidOrigin") }, { status: 403, headers });
   const actor = await currentUser();
-  if (!actor) return NextResponse.json({ error: "Entre novamente." }, { status: 401, headers });
+  if (!actor) return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401, headers });
   const page = z.uuid().safeParse((await context.params).pageId);
   const operation = z.uuid().safeParse(request.headers.get("x-operation-id"));
   if (
@@ -81,7 +88,7 @@ export async function POST(request: NextRequest, context: Context) {
     !operation.success ||
     request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase() !== "application/octet-stream"
   )
-    return NextResponse.json({ error: "Alteração inválida." }, { status: 400, headers });
+    return NextResponse.json({ error: t("editor.invalidChange") }, { status: 400, headers });
   try {
     await requireContentEditor(page.data);
     const delta = await readBoundedBytes(request, MAX_UPDATE_BYTES);

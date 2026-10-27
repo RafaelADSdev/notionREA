@@ -4,11 +4,14 @@ import { createDatabase } from "@/features/databases/server/commands";
 import { databaseFailure, databaseHeaders, sameDatabaseOrigin } from "@/features/databases/server/http";
 import { listDatabases } from "@/features/databases/server/queries";
 import { readBoundedJson } from "@/lib/http";
+import { getTranslations } from "@/lib/i18n/server";
 import { currentUser } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
+  const t = await getTranslations();
+
   if (!(await currentUser()))
-    return NextResponse.json({ error: "Entre novamente." }, { status: 401, headers: databaseHeaders });
+    return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401, headers: databaseHeaders });
   try {
     const { workspaceId, ...query } = z
       .strictObject({
@@ -23,10 +26,12 @@ export async function GET(request: NextRequest) {
   }
 }
 export async function POST(request: NextRequest) {
+  const t = await getTranslations();
+
   if (!sameDatabaseOrigin(request))
-    return NextResponse.json({ error: "Origem inválida." }, { status: 403, headers: databaseHeaders });
+    return NextResponse.json({ error: t("errors.invalidOrigin") }, { status: 403, headers: databaseHeaders });
   if (!(await currentUser()))
-    return NextResponse.json({ error: "Entre novamente." }, { status: 401, headers: databaseHeaders });
+    return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401, headers: databaseHeaders });
   try {
     return NextResponse.json(await createDatabase(await readBoundedJson(request, 16384)), {
       headers: databaseHeaders,

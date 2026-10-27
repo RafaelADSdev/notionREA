@@ -1,5 +1,7 @@
 "use client";
+
 import { useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   allowedFilterOperators,
   type Filter,
@@ -11,24 +13,6 @@ import {
 import type { DatabaseData } from "../types";
 import { ValueInput } from "./database-value";
 
-const OPERATORS: Record<FilterOperator, string> = {
-  eq: "É igual a",
-  neq: "É diferente de",
-  contains: "Contém",
-  startsWith: "Começa com",
-  lt: "Menor que",
-  lte: "Menor ou igual",
-  gt: "Maior que",
-  gte: "Maior ou igual",
-  before: "Antes de",
-  after: "Depois de",
-  between: "Entre",
-  containsAny: "Contém qualquer",
-  containsAll: "Contém todos",
-  containsNone: "Não contém nenhum",
-  isEmpty: "Está vazio",
-  isNotEmpty: "Não está vazio",
-};
 function count(filter: Filter | null): number {
   return filter === null
     ? 0
@@ -60,6 +44,27 @@ export function FilterBuilder({
   value: Filter | null;
   onChange: (value: Filter | null) => void;
 }) {
+  const t = useTranslations();
+
+  const OPERATORS: Record<FilterOperator, string> = {
+    eq: t("database.filterEqual"),
+    neq: t("database.filterDifferent"),
+    contains: t("database.filterContains"),
+    startsWith: t("database.filterStarts"),
+    lt: t("database.filterLess"),
+    lte: t("database.filterLessEqual"),
+    gt: t("database.filterGreater"),
+    gte: t("database.filterGreaterEqual"),
+    before: t("database.filterBefore"),
+    after: t("database.filterAfter"),
+    between: t("database.filterBetween"),
+    containsAny: t("database.filterAny"),
+    containsAll: t("database.filterAll"),
+    containsNone: t("database.filterNone"),
+    isEmpty: t("database.filterEmpty"),
+    isNotEmpty: t("database.filterNotEmpty"),
+  };
+
   const [identities] = useState(() => new WeakMap<Filter, string>());
   const identity = (item: Filter) => {
     let id = identities.get(item);
@@ -75,14 +80,14 @@ export function FilterBuilder({
     if (filter.kind !== "condition")
       return (
         <fieldset className="db-filter-group">
-          <legend>Grupo de condições</legend>
+          <legend>{t("database.filterGroup")}</legend>
           <select
-            aria-label="Combinar condições"
+            aria-label={t("database.combineConditions")}
             value={filter.kind}
             onChange={(event) => update({ ...filter, kind: event.target.value === "or" ? "or" : "and" })}
           >
-            <option value="and">Todas (E)</option>
-            <option value="or">Qualquer (OU)</option>
+            <option value="and">{t("database.allConditions")}</option>
+            <option value="or">{t("database.anyConditions")}</option>
           </select>
           {filter.children.map((child, index) => (
             <div key={identity(child)}>
@@ -103,7 +108,7 @@ export function FilterBuilder({
                 if (first) update({ ...filter, children: [...filter.children, condition(first)] });
               }}
             >
-              Adicionar condição
+              {t("database.addCondition")}
             </button>
             <button
               type="button"
@@ -116,10 +121,10 @@ export function FilterBuilder({
                   });
               }}
             >
-              Adicionar grupo
+              {t("database.addGroup")}
             </button>
             <button type="button" onClick={() => update(null)}>
-              Remover grupo
+              {t("database.removeGroup")}
             </button>
           </div>
         </fieldset>
@@ -138,16 +143,16 @@ export function FilterBuilder({
         : (filter.value ?? null);
     return (
       <fieldset className="db-filter-condition">
-        <legend>Condição</legend>
+        <legend>{t("database.condition")}</legend>
         <select
-          aria-label="Propriedade do filtro"
+          aria-label={t("database.filterProperty")}
           value={filter.propertyId}
           onChange={(event) => {
             const selected = data.properties.find((item) => item.id === event.target.value);
             if (selected) update(condition(selected));
           }}
         >
-          {!property && <option value={filter.propertyId}>Propriedade removida — filtro inválido</option>}
+          {!property && <option value={filter.propertyId}>{t("database.removedFilter")}</option>}
           {data.properties.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
@@ -157,7 +162,7 @@ export function FilterBuilder({
         {property ? (
           <>
             <select
-              aria-label="Operação do filtro"
+              aria-label={t("database.filterOperator")}
               value={filter.operator}
               onChange={(event) => {
                 const operator = event.target.value as FilterOperator;
@@ -197,17 +202,17 @@ export function FilterBuilder({
             )}
           </>
         ) : (
-          <p role="alert">Escolha uma propriedade válida para aplicar este filtro.</p>
+          <p role="alert">{t("database.chooseValidFilter")}</p>
         )}
         <button type="button" onClick={() => update(null)}>
-          Remover condição
+          {t("database.removeCondition")}
         </button>
       </fieldset>
     );
   };
   return (
     <div className="db-filter-builder">
-      <p>Até 50 condições e 5 níveis. As alterações só são consultadas ao aplicar.</p>
+      <p>{t("database.filterLimits")}</p>
       {value ? (
         node(value, 1, onChange)
       ) : (
@@ -218,7 +223,7 @@ export function FilterBuilder({
             if (first) onChange({ kind: "and", children: [condition(first)] });
           }}
         >
-          Adicionar filtro
+          {t("database.addFilter")}
         </button>
       )}
     </div>

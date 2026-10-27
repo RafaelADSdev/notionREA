@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Brand, Icon } from "@/components/icon";
+import { getTranslations } from "@/lib/i18n/server";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const t = await getTranslations();
+
   return (
     <div className="auth-page">
       <aside className="auth-aside">
-        <Link href="/" aria-label="Bloco, início">
+        <Link href="/" aria-label={t("navigation.brandStart")}>
           <Brand />
         </Link>
         <div className="auth-statement">
@@ -13,13 +16,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Icon name="layers" size={76} />
           </div>
           <h2>
-            Seu espaço.
+            {t("auth.yourSpace")}
             <br />
-            No seu ritmo.
+            {t("auth.yourPace")}
           </h2>
-          <p>Um lugar para organizar ideias e trabalhar em conjunto.</p>
+          <p>{t("auth.tagline")}</p>
         </div>
-        <p className="auth-foot">Uma ideia de cada vez.</p>
+        <p className="auth-foot">{t("auth.oneIdea")}</p>
       </aside>
       <main id="main" className="auth-main">
         <div className="auth-content">

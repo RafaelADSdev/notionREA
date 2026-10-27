@@ -1,6 +1,8 @@
 "use client";
+
 import type { Editor } from "@tiptap/core";
 import type { ClipboardEvent, RefObject } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { removeBlockSelection } from "../model/block-commands";
 import { isSafeContentLink, validateContentDocument } from "../model/content-schema";
 import {
@@ -84,6 +86,8 @@ export function usePageEditorClipboard(
   root: RefObject<HTMLDivElement | null>,
   editable: boolean,
 ) {
+  const t = useTranslations();
+
   const copy = (event: ClipboardEvent<HTMLDivElement>, cut: boolean) => {
     if (event.target instanceof Element && event.target.closest("[data-table-cell-selection]")) return;
     if (!(event.target instanceof Element) || event.target.closest("input,textarea,select")) return;
@@ -95,7 +99,7 @@ export function usePageEditorClipboard(
         : range?.value;
       if (!value?.blocks.length) return;
       event.clipboardData.setData(BLOCKS_CLIPBOARD_MIME, JSON.stringify(value));
-      event.clipboardData.setData("text/plain", clipboardPlainText(value));
+      event.clipboardData.setData("text/plain", clipboardPlainText(value, t));
       event.preventDefault();
       event.stopPropagation();
       if (!cut || !editable) return;
@@ -109,7 +113,7 @@ export function usePageEditorClipboard(
       });
       controller.setSelected([]);
     } catch {
-      controller.setError("Não foi possível copiar a seleção. Seu conteúdo foi preservado.");
+      controller.setError(t("editor.copySelectionFailed"));
     }
   };
   const paste = (event: ClipboardEvent<HTMLDivElement>) => {
@@ -214,9 +218,7 @@ export function usePageEditorClipboard(
       event.preventDefault();
       event.stopPropagation();
       controller.setError(
-        error instanceof CrossPageFilePasteError
-          ? "Arquivos de outra página precisam ser enviados novamente. A seleção e os arquivos foram preservados."
-          : "Não foi possível colar esse conteúdo. A seleção foi preservada. Confira o formato ou cole em partes menores.",
+        error instanceof CrossPageFilePasteError ? t("editor.foreignFiles") : t("editor.pasteFailed"),
       );
     }
   };

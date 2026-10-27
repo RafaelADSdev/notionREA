@@ -1,3 +1,4 @@
+import { getTranslations } from "@/lib/i18n/server";
 import "server-only";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -7,7 +8,9 @@ import { currentUser } from "@/lib/supabase/server";
 import { CommentRequestError } from "./server";
 
 export const commentHeaders = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
-export function commentFailure(error: unknown) {
+export async function commentFailure(error: unknown) {
+  const t = await getTranslations();
+
   const status =
     error instanceof CommentRequestError
       ? error.status
@@ -18,30 +21,38 @@ export function commentFailure(error: unknown) {
           : 503;
   const message =
     status === 403
-      ? "Comentários indisponíveis para esta conta."
+      ? t("comments.unavailable")
       : status === 409
-        ? "A conversa mudou. Atualize antes de tentar novamente; seu texto foi preservado."
+        ? t("comments.threadConflict")
         : status === 400
-          ? "Confira o texto e os dados do comentário."
+          ? t("comments.checkData")
           : status === 413
-            ? "Este comentário excede o tamanho permitido."
+            ? t("comments.tooLarge")
             : status === 429
-              ? "Muitas alterações. Aguarde um instante antes de tentar novamente."
-              : "Não foi possível concluir. Tente novamente.";
+              ? t("comments.rateLimit")
+              : t("errors.tryAgain");
   return NextResponse.json(
     { error: message },
     { status, headers: { ...commentHeaders, ...(status === 429 ? { "Retry-After": "5" } : {}) } },
   );
 }
 export async function commentActor(request?: Request) {
+  const t = await getTranslations();
+
   if (request && request.headers.get("origin") !== new URL(getEnvironment().APP_URL).origin)
     return {
-      response: NextResponse.json({ error: "Origem inválida." }, { status: 403, headers: commentHeaders }),
+      response: NextResponse.json(
+        { error: t("errors.invalidOrigin") },
+        { status: 403, headers: commentHeaders },
+      ),
     };
   const actor = await currentUser();
   if (!actor)
     return {
-      response: NextResponse.json({ error: "Entre novamente." }, { status: 401, headers: commentHeaders }),
+      response: NextResponse.json(
+        { error: t("errors.signInAgain") },
+        { status: 401, headers: commentHeaders },
+      ),
     };
   return { actor };
 }

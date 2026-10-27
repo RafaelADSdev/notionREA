@@ -1,19 +1,22 @@
 "use client";
+
 import { useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { useState } from "react";
+import { type ReactNode, type RefCallback, useCallback } from "react";
 import { Icon } from "@/components/icon";
 import { InlineDatabase } from "@/features/databases/inline-database";
+import { useTranslations } from "@/lib/i18n/client";
 import { insertBlock } from "../model/block-commands";
 import { codeLanguageSchema, contentToneSchema } from "../model/block-schema";
 import type { BlockInput } from "../model/stable-page";
 import { BlockMedia } from "./block-media";
 import { BlockText } from "./block-text";
 import { ColumnsBlock } from "./columns-block";
-import { CONTENT_TONE_LABELS } from "./content-labels";
+import { contentToneLabels } from "./content-labels";
 import { PageEditorBlockActions } from "./page-editor-block-actions";
 import type { PageEditorController } from "./page-editor-controller";
 import { TableBlock } from "./table-block";
+import { useVirtualBlockCollapse, VirtualPageBlocks } from "./virtual-page-blocks";
 
 type Props = {
   blocks: readonly BlockInput[];
@@ -66,44 +69,112 @@ export function PageEditorText({
 
 export function PageEditorBlocks({ blocks, controller, editable, parentId = null, draggingId = "" }: Props) {
   const siblings = blocks.filter((block) => block.parentId === parentId);
-  const groups: BlockInput[][] = [];
-  for (const block of siblings) {
+  const groups: { first: number; items: BlockInput[] }[] = [];
+  for (const [index, block] of siblings.entries()) {
     const previous = groups.at(-1);
-    if (previous?.[0]?.type === block.type && lists.has(block.type)) previous.push(block);
-    else groups.push([block]);
+    if (previous?.items[0]?.type === block.type && lists.has(block.type)) previous.items.push(block);
+    else groups.push({ first: index, items: [block] });
   }
   return (
-    <div className="editor-block-children" id={parentId ? `children-${parentId}` : undefined}>
-      {groups.map((group) => {
-        const first = group[0];
-        if (!first) return null;
-        const children = group.map((block, index) => {
-          const frame = (
-            <PageEditorBlock
-              key={block.id}
-              {...{ blocks, controller, editable, draggingId }}
-              block={block}
-              index={siblings.findIndex((item) => item.id === block.id)}
-              listIndex={index}
-            />
-          );
-          return lists.has(first.type) ? <li key={block.id}>{frame}</li> : frame;
-        });
-        if (first.type === "numberListItem")
-          return (
-            <ol key={first.id} className="editor-block-list" data-list-type={first.type}>
-              {children}
-            </ol>
-          );
-        return lists.has(first.type) ? (
-          <ul key={first.id} className="editor-block-list" data-list-type={first.type}>
-            {children}
-          </ul>
-        ) : (
-          (children[0] ?? null)
+    <VirtualPageBlocks
+      items={siblings}
+      className="editor-block-children"
+      {...(parentId ? { id: `children-${parentId}` } : {})}
+      disabled={parentId !== null && controller.session.page.getBlock(parentId)?.type === "columns"}
+      measureRenderedElement
+      renderItem={(block, context) => (
+        <PageEditorBlock
+          key={block.id}
+          {...{ blocks, controller, editable, draggingId }}
+          block={block}
+          index={context.index}
+          listIndex={context.listIndex}
+          measureRef={context.measureRef}
+        />
+      )}
+      renderSegments={(segments, item, { heightFor }) => {
+        const visible = new Set(
+          segments.filter((segment) => segment.kind === "item").map((segment) => segment.index),
         );
-      })}
-    </div>
+        const output: ReactNode[] = [];
+        let gap: { first: string; last: string; height: number } | null = null;
+        const appendGap = (block: BlockInput) => {
+          if (gap) {
+            gap.last = block.id;
+            gap.height += heightFor(block.id);
+          } else gap = { first: block.id, last: block.id, height: heightFor(block.id) };
+        };
+        const flushGap = () => {
+          if (!gap) return;
+          output.push(
+            <div
+              key={`gap:${gap.first}:${gap.last}`}
+              data-virtual-gap=""
+              aria-hidden="true"
+              style={{ height: gap.height, pointerEvents: "none", userSelect: "none" }}
+            />,
+          );
+          gap = null;
+        };
+        for (const group of groups) {
+          const first = group.items[0];
+          if (!first) continue;
+          if (!group.items.some((_block, offset) => visible.has(group.first + offset))) {
+            for (const block of group.items) appendGap(block);
+            continue;
+          }
+          flushGap();
+          if (!lists.has(first.type)) {
+            output.push(item(group.first));
+            continue;
+          }
+          const children: ReactNode[] = [];
+          let listGap: { first: string; last: string; height: number } | null = null;
+          const flushListGap = () => {
+            if (!listGap) return;
+            children.push(
+              <li
+                key={`gap:${listGap.first}:${listGap.last}`}
+                data-virtual-gap=""
+                role="presentation"
+                aria-hidden="true"
+                style={{ height: listGap.height, pointerEvents: "none", userSelect: "none" }}
+              />,
+            );
+            listGap = null;
+          };
+          for (const [offset, block] of group.items.entries()) {
+            if (!visible.has(group.first + offset)) {
+              if (listGap) {
+                listGap.last = block.id;
+                listGap.height += heightFor(block.id);
+              } else listGap = { first: block.id, last: block.id, height: heightFor(block.id) };
+              continue;
+            }
+            flushListGap();
+            children.push(
+              <li key={block.id} aria-posinset={offset + 1} aria-setsize={group.items.length}>
+                {item(group.first + offset)}
+              </li>,
+            );
+          }
+          flushListGap();
+          output.push(
+            first.type === "numberListItem" ? (
+              <ol key={first.id} className="editor-block-list" data-list-type={first.type}>
+                {children}
+              </ol>
+            ) : (
+              <ul key={first.id} className="editor-block-list" data-list-type={first.type}>
+                {children}
+              </ul>
+            ),
+          );
+        }
+        flushGap();
+        return output;
+      }}
+    />
   );
 }
 
@@ -115,10 +186,19 @@ function PageEditorBlock({
   index,
   listIndex,
   draggingId = "",
-}: Omit<Props, "parentId"> & { block: BlockInput; index: number; listIndex: number }) {
+  measureRef,
+}: Omit<Props, "parentId"> & {
+  block: BlockInput;
+  index: number;
+  listIndex: number;
+  measureRef?: RefCallback<HTMLElement>;
+}) {
+  const t = useTranslations();
+
+  const CONTENT_TONE_LABELS = contentToneLabels(t);
   const { page } = controller.session;
   const attrs = page.getBlockAttributes(block.id);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useVirtualBlockCollapse(block.id);
   const { ref, handleRef } = useSortable({
     id: block.id,
     index,
@@ -136,6 +216,13 @@ function PageEditorBlock({
       ),
   });
   const selected = controller.selected.includes(block.id);
+  const frameRef = useCallback(
+    (element: HTMLFieldSetElement | null) => {
+      ref(element);
+      measureRef?.(element);
+    },
+    [ref, measureRef],
+  );
   const nested = (
     <PageEditorBlocks
       blocks={blocks}
@@ -170,7 +257,7 @@ function PageEditorBlock({
         onRemove={() => controller.focus(block.id)}
       />
     );
-  if (block.type === "divider") body = <hr aria-label="Divisor" />;
+  if (block.type === "divider") body = <hr aria-label={t("editor.divider")} />;
   if (block.type === "column" && editable && !blocks.some((child) => child.parentId === block.id))
     body = (
       <button
@@ -181,7 +268,7 @@ function PageEditorBlock({
           if (id) controller.focus(id);
         }}
       >
-        Escrever nesta coluna
+        {t("editor.writeColumn")}
       </button>
     );
   if (block.type === "databaseRef")
@@ -197,12 +284,12 @@ function PageEditorBlock({
     );
   return (
     <fieldset
-      ref={ref}
+      ref={frameRef}
       data-editor-block={block.id}
       data-block-type={block.type}
       data-selected={selected}
       className={`editor-block editor-block-${block.type}`}
-      aria-label={`Bloco ${index + 1}`}
+      aria-label={t("editor.blockNumber", { number: index + 1 })}
       tabIndex={-1}
       onFocus={(event) => {
         if (event.target === event.currentTarget)
@@ -223,10 +310,10 @@ function PageEditorBlock({
       <button
         type="button"
         className="editor-block-comment"
-        aria-label={`Comentários do bloco ${index + 1}`}
+        aria-label={t("editor.blockCommentsNumber", { number: index + 1 })}
         onClick={() => controller.openComments(block.id)}
       >
-        Comentários
+        {t("comments.title")}
       </button>
       {editable && (
         <div className="editor-block-controls">
@@ -234,7 +321,7 @@ function PageEditorBlock({
             type="button"
             ref={handleRef}
             className="editor-block-handle"
-            aria-label={`Mover ou selecionar bloco ${index + 1}`}
+            aria-label={t("editor.moveBlockNumber", { number: index + 1 })}
             onClick={() => controller.selectFrame(block.id)}
           >
             <Icon name="drag" />
@@ -260,7 +347,7 @@ function PageEditorBlock({
         {block.type === "task" && (
           <label className="editor-task-check">
             <span id={`task-action-${block.id}`} className="sr-only">
-              Concluir tarefa:
+              {t("editor.completeTask")}
             </span>
             <input
               type="checkbox"
@@ -281,7 +368,7 @@ function PageEditorBlock({
           <button
             type="button"
             className="editor-toggle"
-            aria-label={collapsed ? "Expandir conteúdo" : "Recolher conteúdo"}
+            aria-label={collapsed ? t("editor.expandContent") : t("editor.collapseContent")}
             aria-expanded={!collapsed}
             aria-controls={`children-${block.id}`}
             onClick={() => setCollapsed(!collapsed)}
@@ -296,7 +383,7 @@ function PageEditorBlock({
         )}
         {block.type === "callout" && editable && (
           <label className="editor-code-language">
-            Cor do destaque
+            {t("editor.calloutColor")}
             <select
               value={String(attrs.tone ?? "indigo")}
               onChange={(event) =>
@@ -317,9 +404,9 @@ function PageEditorBlock({
         )}
         {block.type === "code" && (
           <label className="editor-code-language">
-            Linguagem do código
+            {t("editor.codeLanguage")}
             <select
-              aria-label="Linguagem do código"
+              aria-label={t("editor.codeLanguage")}
               value={String(attrs.language ?? "plaintext")}
               disabled={!editable}
               onChange={(event) =>
@@ -334,7 +421,7 @@ function PageEditorBlock({
             >
               {codeLanguageSchema.options.map((language) => (
                 <option key={language} value={language}>
-                  {language === "plaintext" ? "Texto simples" : language}
+                  {language === "plaintext" ? t("editor.plainText") : language}
                 </option>
               ))}
             </select>
@@ -357,7 +444,7 @@ function PageEditorBlock({
           data-drop-target={isDropTarget}
           aria-hidden="true"
         >
-          Dentro do bloco
+          {t("editor.insideBlock")}
         </span>
       )}
     </fieldset>

@@ -2,16 +2,17 @@
 
 import type { Editor } from "@tiptap/core";
 import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { contentToneSchema } from "../model/block-schema";
-import { CONTENT_TONE_LABELS } from "./content-labels";
+import { contentToneLabels } from "./content-labels";
 
 export type FormattingToolbarProps = { editor: Editor | null; disabled?: boolean; onLink: () => void };
 const marks = [
-  { name: "bold", label: "Negrito", short: "N" },
-  { name: "italic", label: "Itálico", short: "I" },
-  { name: "underline", label: "Sublinhado", short: "S" },
-  { name: "strike", label: "Tachado", short: "T" },
-  { name: "code", label: "Código inline", short: "</>" },
+  { name: "bold", label: "editor.bold", short: "N" },
+  { name: "italic", label: "editor.italic", short: "I" },
+  { name: "underline", label: "editor.underline", short: "S" },
+  { name: "strike", label: "editor.strike", short: "T" },
+  { name: "code", label: "editor.inlineCode", short: "</>" },
 ] as const;
 
 function tone(value: unknown): string | undefined {
@@ -20,6 +21,8 @@ function tone(value: unknown): string | undefined {
 }
 
 export function FormattingToolbar({ editor, disabled = false, onLink }: FormattingToolbarProps) {
+  const t = useTranslations();
+  const CONTENT_TONE_LABELS = contentToneLabels(t);
   const [active, setActive] = useState(0);
   const controls = useRef<(HTMLButtonElement | HTMLSelectElement | null)[]>([]);
   const subscribe = useCallback(
@@ -67,7 +70,7 @@ export function FormattingToolbar({ editor, disabled = false, onLink }: Formatti
   return (
     <div
       role="toolbar"
-      aria-label="Formatar texto"
+      aria-label={t("editor.formatText")}
       className="editor-formatting-toolbar"
       onKeyDown={(event) => {
         if (event.nativeEvent.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -96,8 +99,8 @@ export function FormattingToolbar({ editor, disabled = false, onLink }: Formatti
         <button
           type="button"
           key={mark.name}
-          aria-label={mark.label}
-          title={mark.label}
+          aria-label={t(mark.label)}
+          title={t(mark.label)}
           aria-pressed={Boolean(editor && !editor.isDestroyed && editor.isActive(mark.name))}
           disabled={unavailable}
           className="editor-format-button"
@@ -112,14 +115,16 @@ export function FormattingToolbar({ editor, disabled = false, onLink }: Formatti
           }}
         >
           <span aria-hidden="true" data-format={mark.name}>
-            {mark.short}
+            {t.locale === "en"
+              ? ({ bold: "B", italic: "I", underline: "U", strike: "S", code: "</>" } as const)[mark.name]
+              : mark.short}
           </span>
         </button>
       ))}
       <button
         type="button"
-        aria-label="Link"
-        title="Link"
+        aria-label={t("common.link")}
+        title={t("common.link")}
         aria-pressed={Boolean(editor && !editor.isDestroyed && editor.isActive("link"))}
         disabled={unavailable}
         className="editor-format-button"
@@ -131,14 +136,14 @@ export function FormattingToolbar({ editor, disabled = false, onLink }: Formatti
         onMouseDown={(event) => event.preventDefault()}
         onClick={onLink}
       >
-        Link
+        {t("common.link")}
       </button>
       {(["color", "background"] as const).map((field, ordinal) => (
         <label key={field} className="editor-format-color-field">
-          <span>{field === "color" ? "Cor do texto" : "Cor de fundo"}</span>
+          <span>{field === "color" ? t("editor.textColor") : t("editor.backgroundColor")}</span>
           <select
             key={field}
-            aria-label={field === "color" ? "Cor do texto" : "Cor de fundo"}
+            aria-label={field === "color" ? t("editor.textColor") : t("editor.backgroundColor")}
             className="editor-format-color"
             disabled={unavailable}
             value={tone(attrs[field]) ?? "default"}

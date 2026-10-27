@@ -1,27 +1,42 @@
+import type { MessageKey } from "@/lib/i18n/catalog";
+import { createTranslator, DEFAULT_LOCALE, type Translator } from "@/lib/i18n/core";
+import { formatDate, formatDecimal } from "@/lib/i18n/format";
 import type { DateValue, PropertyDefinition, PropertyValue, ViewType } from "../model";
 import type { DatabaseData, DatabaseRow } from "../types";
 
-export const PROPERTY_LABELS: Record<PropertyDefinition["type"], string> = {
-  title: "Título",
-  text: "Texto",
-  number: "Número",
-  select: "Seleção",
-  multiSelect: "Seleção múltipla",
-  date: "Data",
-  checkbox: "Checkbox",
-  url: "URL",
-  person: "Pessoa",
-  relation: "Relação",
-  createdTime: "Criado em",
-  editedTime: "Editado em",
+const propertyKeys: Record<PropertyDefinition["type"], MessageKey> = {
+  title: "database.titleType",
+  text: "editor.text",
+  number: "database.numberType",
+  select: "database.selectType",
+  multiSelect: "database.multiSelectType",
+  date: "database.dateType",
+  checkbox: "database.checkboxType",
+  url: "database.urlType",
+  person: "common.person",
+  relation: "database.relationType",
+  createdTime: "database.createdType",
+  editedTime: "database.editedType",
 };
-export const VIEW_LABELS: Record<ViewType, string> = {
-  table: "Tabela",
-  board: "Board",
-  list: "Lista",
-  calendar: "Calendário",
-  gallery: "Galeria",
+const viewKeys: Record<ViewType, MessageKey> = {
+  table: "database.tableView",
+  board: "database.boardView",
+  list: "database.listView",
+  calendar: "database.calendarView",
+  gallery: "database.galleryView",
 };
+export function propertyLabels(t: Translator): Record<PropertyDefinition["type"], string> {
+  return Object.fromEntries(Object.entries(propertyKeys).map(([type, key]) => [type, t(key)])) as Record<
+    PropertyDefinition["type"],
+    string
+  >;
+}
+export function viewLabels(t: Translator): Record<ViewType, string> {
+  return Object.fromEntries(Object.entries(viewKeys).map(([type, key]) => [type, t(key)])) as Record<
+    ViewType,
+    string
+  >;
+}
 export function rowValue(row: DatabaseRow, property: PropertyDefinition): PropertyValue {
   if (property.type === "title") return row.title;
   if (property.type === "createdTime") return row.createdAt;
@@ -89,9 +104,10 @@ export function displayValue(
   property: PropertyDefinition,
   value: PropertyValue,
   data: Pick<DatabaseData, "people" | "references">,
+  t: Translator = createTranslator(DEFAULT_LOCALE),
 ): string {
-  if (value === null) return "Sem valor";
-  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  if (value === null) return t("database.noValue");
+  if (typeof value === "boolean") return value ? t("common.yes") : t("common.no");
   if (Array.isArray(value)) {
     const choices =
       property.type === "multiSelect"
@@ -106,17 +122,17 @@ export function displayValue(
           return choice
             ? "label" in choice
               ? choice.label
-              : "Referência indisponível"
-            : "Referência indisponível";
+              : t("editor.referenceUnavailable")
+            : t("editor.referenceUnavailable");
         })
-        .join(", ") || "Sem valor"
+        .join(", ") || t("database.noValue")
     );
   }
   if (typeof value === "object") {
     const format = (instant: string) =>
       value.kind === "civil"
-        ? instant.split("-").reverse().join("/")
-        : new Intl.DateTimeFormat("pt-BR", {
+        ? formatDate(instant, t.locale, { dateStyle: "short" })
+        : new Intl.DateTimeFormat(t.locale, {
             dateStyle: "short",
             timeStyle: "short",
             timeZone: value.timeZone,
@@ -124,10 +140,13 @@ export function displayValue(
     return `${format(value.start)}${value.end ? ` – ${format(value.end)}` : ""}${value.kind === "instant" ? ` · ${value.timeZone}` : ""}`;
   }
   if (property.type === "select")
-    return property.config.options.find((option) => option.id === value)?.label ?? "Opção indisponível";
+    return (
+      property.config.options.find((option) => option.id === value)?.label ?? t("database.optionUnavailable")
+    );
   if (property.type === "createdTime" || property.type === "editedTime")
-    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(
+    return new Intl.DateTimeFormat(t.locale, { dateStyle: "short", timeStyle: "short" }).format(
       new Date(value),
     );
-  return value === "" ? "Vazio" : value;
+  if (property.type === "number") return formatDecimal(value, t.locale);
+  return value === "" ? t("database.emptyValue") : value;
 }

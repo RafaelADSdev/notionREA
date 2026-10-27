@@ -3,25 +3,27 @@ import { z } from "zod";
 import { sharingCommand, sharingSchema } from "@/features/sharing/model";
 import { getEnvironment } from "@/lib/env";
 import { readBoundedJson } from "@/lib/http";
+import { getTranslations } from "@/lib/i18n/server";
 import { createClient, currentUser } from "@/lib/supabase/server";
 
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 type Context = { params: Promise<{ pageId: string }> };
-function failure(code?: string) {
+async function failure(code?: string) {
+  const t = await getTranslations();
+
   const status = code === "40001" ? 409 : code === "42501" ? 403 : code === "22023" ? 400 : 503;
   return NextResponse.json(
     {
-      error:
-        status === 409
-          ? "O acesso mudou. Atualize antes de confirmar novamente."
-          : "Não foi possível concluir o compartilhamento.",
+      error: status === 409 ? t("sharing.conflict") : t("sharing.failed"),
     },
     { status, headers },
   );
 }
 export async function GET(request: NextRequest, context: Context) {
+  const t = await getTranslations();
+
   if (!(await currentUser()))
-    return NextResponse.json({ error: "Entre novamente." }, { status: 401, headers });
+    return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401, headers });
   try {
     const id = z.uuid().parse((await context.params).pageId),
       client = await createClient();
@@ -53,10 +55,12 @@ export async function GET(request: NextRequest, context: Context) {
   }
 }
 export async function POST(request: NextRequest, context: Context) {
+  const t = await getTranslations();
+
   if (request.headers.get("origin") !== new URL(getEnvironment().APP_URL).origin)
-    return NextResponse.json({ error: "Origem inválida." }, { status: 403, headers });
+    return NextResponse.json({ error: t("errors.invalidOrigin") }, { status: 403, headers });
   if (!(await currentUser()))
-    return NextResponse.json({ error: "Entre novamente." }, { status: 401, headers });
+    return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401, headers });
   try {
     const id = z.uuid().parse((await context.params).pageId),
       body = sharingCommand.parse(await readBoundedJson(request, 262144)),

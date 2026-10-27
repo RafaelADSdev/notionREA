@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import { contentToneSchema } from "@/features/editor/model/block-schema";
 import { isSafeContentLink } from "@/features/editor/model/content-schema";
+import { useTranslations } from "@/lib/i18n/client";
+import { formatDate, formatDecimal, formatNumber } from "@/lib/i18n/format";
 import {
   type PublicBlock,
   type PublicInline,
@@ -12,10 +16,20 @@ import {
 } from "./model";
 import "./public.css";
 
+const ReferencesContext = createContext<ReadonlyMap<string, { title: string; token: string }>>(new Map());
 function Inline({ value }: { value: PublicInline }) {
+  const t = useTranslations();
+  const references = useContext(ReferencesContext);
+  if (value.type === "unavailable") return <span>{t("sharing.contentUnavailable")}</span>;
   if (value.type === "hardBreak") return <br />;
-  if (value.type === "pageMention")
-    return <Link href={`/s/${value.attrs.token}`}>{value.attrs.title || "Página sem título"}</Link>;
+  if (value.type === "pageMention") {
+    const reference = "token" in value.attrs ? value.attrs : references.get(value.attrs.pageId);
+    return reference ? (
+      <Link href={`/s/${reference.token}`}>{reference.title || t("pages.untitled")}</Link>
+    ) : (
+      <span>{t("sharing.contentUnavailable")}</span>
+    );
+  }
   let node: ReactNode = value.text;
   for (const mark of value.marks ?? []) {
     if (mark.type === "bold") node = <strong>{node}</strong>;
@@ -124,6 +138,8 @@ function Block({
   token: string;
   depth: number;
 }) {
+  const t = useTranslations();
+
   const nested = <Tree groups={groups} parentId={block.id} token={token} depth={depth + 1} />;
   const text = <Text block={block} />;
   if (block.type === "divider") return <hr />;
@@ -175,7 +191,7 @@ function Block({
       <>
         <span
           role="img"
-          aria-label={block.attributes.checked === true ? "Tarefa concluída" : "Tarefa pendente"}
+          aria-label={block.attributes.checked === true ? t("sharing.taskDone") : t("sharing.taskPending")}
         >
           {block.attributes.checked === true ? "☑" : "☐"}
         </span>{" "}
@@ -208,11 +224,11 @@ function Block({
             <a href={href}>
               {typeof block.attributes.displayName === "string"
                 ? block.attributes.displayName
-                : "Baixar arquivo"}
+                : t("sharing.downloadFile")}
             </a>
           )
         ) : (
-          <p>Arquivo indisponível.</p>
+          <p>{t("files.unavailable")}</p>
         )}
         {typeof block.attributes.caption === "string" && <figcaption>{block.attributes.caption}</figcaption>}
       </figure>
@@ -222,10 +238,10 @@ function Block({
     const linked = publicationToken.safeParse(block.attributes.token);
     return linked.success ? (
       <p>
-        <Link href={`/s/${linked.data}`}>Abrir base publicada</Link>
+        <Link href={`/s/${linked.data}`}>{t("sharing.openDatabase")}</Link>
       </p>
     ) : (
-      <p>Base de dados indisponível nesta publicação.</p>
+      <p>{t("sharing.databaseUnavailable")}</p>
     );
   }
   if (block.type === "table")
@@ -280,16 +296,39 @@ function Block({
     </>
   );
 }
-function Value({ value, options }: { value: unknown; options?: { id: string; label: string }[] }) {
+function Value({
+  value,
+  options,
+  type,
+}: {
+  value: unknown;
+  options?: { id: string; label: string }[];
+  type?: string;
+}) {
+  const t = useTranslations();
+
   if (value === null || value === undefined) return <span>—</span>;
-  if (typeof value === "boolean") return <span>{value ? "Sim" : "Não"}</span>;
+  if (typeof value === "boolean") return <span>{value ? t("common.yes") : t("common.no")}</span>;
+  if (typeof value === "string" && type === "number") return <span>{formatDecimal(value, t.locale)}</span>;
+  if (
+    typeof value === "string" &&
+    (type === "createdTime" || type === "editedTime") &&
+    !Number.isNaN(Date.parse(value))
+  )
+    return <span>{formatDate(value, t.locale, { dateStyle: "short", timeStyle: "short" })}</span>;
   if (typeof value === "string")
     return <span>{options?.find((option) => option.id === value)?.label ?? value}</span>;
-  if (typeof value === "number") return <span>{String(value)}</span>;
+  if (typeof value === "number") return <span>{formatNumber(value, t.locale)}</span>;
   if (Array.isArray(value) && value.every((item) => typeof item === "string"))
     return (
       <span>
-        {value.map((item) => options?.find((option) => option.id === item)?.label ?? item).join(", ")}
+        {value
+          .map((item) =>
+            type === "person"
+              ? t("common.member")
+              : (options?.find((option) => option.id === item)?.label ?? item),
+          )
+          .join(", ")}
       </span>
     );
   if (Array.isArray(value))
@@ -307,17 +346,21 @@ function Value({ value, options }: { value: unknown; options?: { id: string; lab
     );
   const reference = publicReference.safeParse(value);
   if (reference.success)
-    return <Link href={`/s/${reference.data.token}`}>{reference.data.title || "Página sem título"}</Link>;
+    return <Link href={`/s/${reference.data.token}`}>{reference.data.title || t("pages.untitled")}</Link>;
   if (typeof value === "object" && "start" in value && typeof value.start === "string")
     return (
       <span>
-        {value.start}
-        {"end" in value && typeof value.end === "string" ? ` — ${value.end}` : ""}
+        {!Number.isNaN(Date.parse(value.start)) ? formatDate(value.start, t.locale) : value.start}
+        {"end" in value && typeof value.end === "string"
+          ? ` — ${!Number.isNaN(Date.parse(value.end)) ? formatDate(value.end, t.locale) : value.end}`
+          : ""}
       </span>
     );
-  return <span>Conteúdo indisponível</span>;
+  return <span>{t("sharing.contentUnavailable")}</span>;
 }
 export function PublicPageDocument({ data, token }: { data: PublicPage; token: string }) {
+  const t = useTranslations();
+
   const groups = new Map<string | null, PublicBlock[]>();
   for (const block of data.content.blocks) {
     const siblings = groups.get(block.parentId) ?? [];
@@ -327,8 +370,8 @@ export function PublicPageDocument({ data, token }: { data: PublicPage; token: s
   return (
     <main className="public-page">
       <header>
-        <Link href="/">Bloco.</Link>
-        <span>Página compartilhada · somente leitura</span>
+        <Link href="/">{t("sharing.brandHeading")}</Link>
+        <span>{t("sharing.readonlyPage")}</span>
       </header>
       <article>
         {data.page.coverFileId && (
@@ -343,16 +386,20 @@ export function PublicPageDocument({ data, token }: { data: PublicPage; token: s
         )}
         <h1>
           {data.page.icon && <span aria-hidden="true">{data.page.icon} </span>}
-          {data.page.title || "Página sem título"}
+          {data.page.title || t("pages.untitled")}
         </h1>
-        <Tree groups={groups} parentId={null} token={token} />
+        <ReferencesContext
+          value={new Map((data.content.references ?? []).map((reference) => [reference.id, reference]))}
+        >
+          <Tree groups={groups} parentId={null} token={token} />
+        </ReferencesContext>
         {data.database && (
-          <section aria-label="Base de dados publicada">
+          <section aria-label={t("sharing.publishedDatabase")}>
             <div className="public-table-scroll">
               <table>
                 <thead>
                   <tr>
-                    <th scope="col">Registro</th>
+                    <th scope="col">{t("sharing.record")}</th>
                     {data.database.properties.map((property) => (
                       <th scope="col" key={property.id}>
                         {property.name}
@@ -364,12 +411,13 @@ export function PublicPageDocument({ data, token }: { data: PublicPage; token: s
                   {data.database.rows.map((row) => (
                     <tr key={row.id}>
                       <th scope="row">
-                        <Link href={`/s/${row.token}`}>{row.title || "Registro sem título"}</Link>
+                        <Link href={`/s/${row.token}`}>{row.title || t("database.untitledRecord")}</Link>
                       </th>
                       {data.database?.properties.map((property) => (
                         <td key={property.id}>
                           <Value
                             value={row.values[property.id]}
+                            type={property.type}
                             {...(property.options ? { options: property.options } : {})}
                           />
                         </td>
@@ -379,14 +427,14 @@ export function PublicPageDocument({ data, token }: { data: PublicPage; token: s
                 </tbody>
               </table>
             </div>
-            {!data.database.rows.length && <p>Nenhum registro publicado nesta consulta.</p>}
+            {!data.database.rows.length && <p>{t("sharing.noRecords")}</p>}
             {data.database.nextCursor && (
-              <Link href={`/s/${token}?after=${data.database.nextCursor}`}>Próximos registros</Link>
+              <Link href={`/s/${token}?after=${data.database.nextCursor}`}>{t("sharing.nextRecords")}</Link>
             )}
           </section>
         )}
       </article>
-      <footer>Publicação do Bloco. O acesso pode ser revogado pelo proprietário.</footer>
+      <footer>{t("sharing.publicNotice")}</footer>
     </main>
   );
 }

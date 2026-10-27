@@ -57,6 +57,8 @@ jobs:
         run: pnpm test:integration
       - name: Large workspace search and navigation budget
         run: pnpm test:perf
+      - name: Large database pagination filter and sort budget
+        run: pnpm test:perf:databases
       - name: Build
         run: pnpm test:build
       - name: Bounded editor validation capacity

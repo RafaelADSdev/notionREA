@@ -1,12 +1,14 @@
 "use client";
 
 import { Editor } from "@tiptap/core";
-import { useEffect, useRef } from "react";
+import { type CSSProperties, useEffect, useRef } from "react";
 import * as Y from "yjs";
 import { remoteCursors } from "@/features/collaboration/remote-cursors";
+import { useTranslations } from "@/lib/i18n/client";
 import { pageCollaboration } from "../model/page-collaboration";
 import type { StablePage } from "../model/stable-page";
 import { codeHighlightExtension } from "./code-highlight";
+import { handleTextDeletion } from "./text-deletion";
 import { createTextExtensions, type MentionResolver } from "./text-extensions";
 import { installTextNavigation, synchronizeNativeSelection } from "./text-navigation";
 
@@ -30,6 +32,9 @@ const patterns = new Set(["#", "##", "###", "-", "*", "+", "1.", "[]", "[ ]", ">
 
 /** Each view binds the existing fragment; neither view lifecycle nor transforms replace it. */
 export function BlockText(props: BlockTextProps) {
+  const t = useTranslations();
+  const translation = useRef(t);
+  const localeListeners = useRef(new Set<() => void>());
   const { page, blockId, editable, mentionResolver } = props;
   const host = useRef<HTMLDivElement>(null);
   const active = useRef<Editor | null>(null);
@@ -46,7 +51,18 @@ export function BlockText(props: BlockTextProps) {
       injectCSS: false,
       editable: callbacks.current.editable,
       extensions: [
-        ...createTextExtensions(mentionResolver ? { mentionResolver } : {}),
+        ...createTextExtensions({
+          ...(mentionResolver ? { mentionResolver } : {}),
+          locale: {
+            translate: () => translation.current,
+            subscribe: (listener) => {
+              localeListeners.current.add(listener);
+              return () => {
+                localeListeners.current.delete(listener);
+              };
+            },
+          },
+        }),
         pageCollaboration(page, blockId),
         remoteCursors(page.document, blockId),
         codeHighlightExtension({
@@ -56,9 +72,12 @@ export function BlockText(props: BlockTextProps) {
         }),
       ],
       editorProps: {
+        handleDOMEvents: {
+          beforeinput: (view, event) => handleTextDeletion(view, event),
+        },
         attributes: {
           role: "textbox",
-          "aria-label": "Texto do bloco",
+          "aria-label": translation.current("editor.blockText"),
           "aria-multiline": "true",
           class: "block-text min-h-6 outline-none whitespace-pre-wrap break-words",
         },
@@ -199,5 +218,23 @@ export function BlockText(props: BlockTextProps) {
   useEffect(() => {
     active.current?.setEditable(editable);
   }, [editable]);
-  return <div ref={host} id={`editor-text-${blockId}`} data-block-text={blockId} />;
+  useEffect(() => {
+    translation.current = t;
+    active.current?.view.dom.setAttribute("aria-label", t("editor.blockText"));
+    for (const listener of localeListeners.current) listener();
+  }, [t]);
+  return (
+    <div
+      ref={host}
+      id={`editor-text-${blockId}`}
+      data-block-text={blockId}
+      data-placeholder={t("editor.startWriting")}
+      style={
+        {
+          "--block-placeholder": JSON.stringify(t("editor.startWriting")),
+          "--code-placeholder": JSON.stringify(t("editor.startCode")),
+        } as CSSProperties
+      }
+    />
+  );
 }

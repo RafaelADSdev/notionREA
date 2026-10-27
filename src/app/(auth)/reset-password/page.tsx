@@ -1,10 +1,16 @@
 import { AuthForm } from "@/features/auth/auth-form";
-export const metadata = { title: "Nova senha" };
-export default function ResetPasswordPage() {
+import { getTranslations } from "@/lib/i18n/server";
+export async function generateMetadata() {
+  const t = await getTranslations();
+  return { title: t("auth.newPassword") };
+}
+export default async function ResetPasswordPage() {
+  const t = await getTranslations();
+
   return (
     <>
-      <h1>Escolha uma nova senha.</h1>
-      <p>Use uma combinação exclusiva para proteger seu espaço.</p>
+      <h1>{t("auth.resetHeading")}</h1>
+      <p>{t("auth.resetDescription")}</p>
       <AuthForm mode="reset" />
     </>
   );

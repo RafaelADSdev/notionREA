@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import type { EditorSession } from "@/features/editor/client/editor-session";
+import { useTranslations } from "@/lib/i18n/client";
 import { cursorStore } from "./cursor-store";
 import { type CollaborationSnapshot, EMPTY_COLLABORATION, PageCollaboration } from "./page-collaboration";
 import type { SharedCursor } from "./protocol";
@@ -33,6 +34,7 @@ class CollaborationBinding {
   }
 }
 export function usePageCollaboration(session: EditorSession, editable: boolean) {
+  const t = useTranslations();
   const binding = useMemo(() => new CollaborationBinding(session), [session]);
   const snapshot = useSyncExternalStore(binding.subscribe, binding.getSnapshot, () => EMPTY_COLLABORATION);
   useEffect(() => {
@@ -47,7 +49,6 @@ export function usePageCollaboration(session: EditorSession, editable: boolean) 
     const store = cursorStore(session.document);
     const unsubscribe = controller.subscribe(() => {
       const next = controller.getSnapshot();
-      store.set(next.participants);
       binding.publish(next);
     });
     binding.publish(controller.getSnapshot());
@@ -70,6 +71,14 @@ export function usePageCollaboration(session: EditorSession, editable: boolean) 
       document.removeEventListener("visibilitychange", visibility);
     };
   }, [session, binding]);
+  useEffect(() => {
+    cursorStore(session.document).set(
+      snapshot.participants.map((participant) => ({
+        ...participant,
+        label: participant.label || t("common.member"),
+      })),
+    );
+  }, [session.document, snapshot.participants, t]);
   useEffect(() => {
     if (!editable) binding.publishCursor(null);
   }, [editable, binding]);

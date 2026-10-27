@@ -1,10 +1,16 @@
 import { AuthForm } from "@/features/auth/auth-form";
-export const metadata = { title: "Criar conta" };
-export default function RegisterPage() {
+import { getTranslations } from "@/lib/i18n/server";
+export async function generateMetadata() {
+  const t = await getTranslations();
+  return { title: t("auth.createAccount") };
+}
+export default async function RegisterPage() {
+  const t = await getTranslations();
+
   return (
     <>
-      <h1>Um lugar para suas ideias.</h1>
-      <p>Crie sua conta. Vamos enviar um e-mail para confirmar que ela é sua.</p>
+      <h1>{t("auth.registerHeading")}</h1>
+      <p>{t("auth.registerDescription")}</p>
       <AuthForm mode="register" />
     </>
   );

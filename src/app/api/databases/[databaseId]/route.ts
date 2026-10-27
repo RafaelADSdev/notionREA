@@ -5,14 +5,17 @@ import { databaseFailure, databaseHeaders, sameDatabaseOrigin } from "@/features
 import { loadDatabase } from "@/features/databases/server/queries";
 import { queryActionSchema } from "@/features/databases/server/validation";
 import { readBoundedJson } from "@/lib/http";
+import { getTranslations } from "@/lib/i18n/server";
 import { currentUser } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 type Context = { params: Promise<{ databaseId: string }> };
 export async function GET(request: NextRequest, context: Context) {
+  const t = await getTranslations();
+
   if (!(await currentUser()))
-    return NextResponse.json({ error: "Entre novamente." }, { status: 401, headers: databaseHeaders });
+    return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401, headers: databaseHeaders });
   try {
     const id = z.uuid().parse((await context.params).databaseId);
     const query = z
@@ -30,11 +33,13 @@ export async function GET(request: NextRequest, context: Context) {
   }
 }
 export async function POST(request: NextRequest, context: Context) {
+  const t = await getTranslations();
+
   if (!sameDatabaseOrigin(request))
-    return NextResponse.json({ error: "Origem inválida." }, { status: 403, headers: databaseHeaders });
+    return NextResponse.json({ error: t("errors.invalidOrigin") }, { status: 403, headers: databaseHeaders });
   const actor = await currentUser();
   if (!actor)
-    return NextResponse.json({ error: "Entre novamente." }, { status: 401, headers: databaseHeaders });
+    return NextResponse.json({ error: t("errors.signInAgain") }, { status: 401, headers: databaseHeaders });
   try {
     const id = z.uuid().parse((await context.params).databaseId);
     const body = await readBoundedJson(request, 262144);

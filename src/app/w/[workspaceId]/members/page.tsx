@@ -1,11 +1,15 @@
-import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient, currentUser } from "@/lib/supabase/server";
-import { InvitationForm, MemberForm } from "@/features/workspaces/forms";
 import { uuidSchema } from "@/features/auth/validation";
+import { InvitationForm, MemberForm } from "@/features/workspaces/forms";
+import { getTranslations } from "@/lib/i18n/server";
+import { createClient, currentUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Equipe" };
+export async function generateMetadata() {
+  const t = await getTranslations();
+  return { title: t("navigation.team") };
+}
 export default async function MembersPage({
   params,
   searchParams,
@@ -13,6 +17,8 @@ export default async function MembersPage({
   params: Promise<{ workspaceId: string }>;
   searchParams: Promise<{ afterTime?: string; afterId?: string }>;
 }) {
+  const t = await getTranslations();
+
   const user = await currentUser();
   if (!user) redirect("/login");
   const { workspaceId } = await params;
@@ -27,10 +33,8 @@ export default async function MembersPage({
   if (membership.role !== "owner")
     return (
       <div className="document-heading">
-        <h1>Equipe.</h1>
-        <p>
-          Você participa deste workspace. Para convidar pessoas ou alterar acessos, fale com um administrador.
-        </p>
+        <h1>{t("workspaces.teamHeading")}</h1>
+        <p>{t("workspaces.memberNotice")}</p>
       </div>
     );
   const cursor = await searchParams;
@@ -41,36 +45,30 @@ export default async function MembersPage({
     p_workspace_id: workspaceId,
     ...(paged ? { p_after_created_at: afterTime.data, p_after_user_id: afterId.data } : {}),
   });
-  if (error) throw new Error("Não foi possível carregar a equipe.");
+  if (error) throw new Error(t("workspaces.teamFailed"));
   const visible = members.slice(0, 50);
   const last = visible.at(-1);
   return (
     <>
       <div className="document-heading">
-        <h1>Gente que constrói junto.</h1>
-        <p>
-          Gerencie quem participa do workspace. Cada página mantém suas próprias permissões; entrar na equipe
-          não abre conteúdo privado.
-        </p>
+        <h1>{t("workspaces.teamWelcome")}</h1>
+        <p>{t("workspaces.teamDescription")}</p>
       </div>
       <section className="section">
-        <h2>Convidar uma pessoa</h2>
+        <h2>{t("workspaces.invitePerson")}</h2>
         <InvitationForm workspaceId={workspaceId} />
-        <p className="notice">
-          O convite só pode ser aceito pela conta indicada, com e-mail confirmado. Um novo convite invalida o
-          anterior.
-        </p>
+        <p className="notice">{t("workspaces.inviteNotice")}</p>
       </section>
       <section className="section">
-        <h2>Membros</h2>
+        <h2>{t("workspaces.members")}</h2>
         <div className="table-wrap">
           <table>
-            <caption className="sr-only">Pessoas e permissões no workspace</caption>
+            <caption className="sr-only">{t("workspaces.peopleAndPermissions")}</caption>
             <thead>
               <tr>
-                <th scope="col">Pessoa</th>
-                <th scope="col">Acesso</th>
-                <th scope="col">Gerenciar</th>
+                <th scope="col">{t("common.person")}</th>
+                <th scope="col">{t("common.access")}</th>
+                <th scope="col">{t("common.manage")}</th>
               </tr>
             </thead>
             <tbody>
@@ -78,10 +76,12 @@ export default async function MembersPage({
                 <tr key={member.user_id}>
                   <td>
                     {member.email}
-                    {member.user_id === user.id && <span className="notice"> (você)</span>}
+                    {member.user_id === user.id && <span className="notice"> {t("common.you")}</span>}
                   </td>
                   <td>
-                    <span className="pill">{member.role === "owner" ? "Administrador" : "Membro"}</span>
+                    <span className="pill">
+                      {member.role === "owner" ? t("common.administrator") : t("common.member")}
+                    </span>
                   </td>
                   <td>
                     <MemberForm
@@ -96,20 +96,17 @@ export default async function MembersPage({
             </tbody>
           </table>
         </div>
-        <nav className="form-links" aria-label="Páginas da equipe">
-          {paged && <Link href={`/w/${workspaceId}/members`}>Primeiros membros</Link>}
+        <nav className="form-links" aria-label={t("workspaces.teamPages")}>
+          {paged && <Link href={`/w/${workspaceId}/members`}>{t("workspaces.firstMembers")}</Link>}
           {members.length > 50 && last && (
             <Link
               href={`/w/${workspaceId}/members?${new URLSearchParams({ afterTime: last.created_at, afterId: last.user_id })}`}
             >
-              Próximos membros
+              {t("workspaces.nextMembers")}
             </Link>
           )}
         </nav>
-        <p className="notice">
-          Mantenha sempre pelo menos um administrador. Administradores podem gerenciar todo o conteúdo do
-          workspace.
-        </p>
+        <p className="notice">{t("workspaces.keepOwner")}</p>
       </section>
     </>
   );

@@ -75,7 +75,8 @@ export function Brand() {
         <Icon name="layers" size={25} />
       </span>
       <span>
-        Bloco<span className="brand-dot">.</span>
+        Bloco
+        <span className="brand-dot">.</span>
       </span>
     </span>
   );

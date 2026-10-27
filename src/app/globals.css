@@ -5,12 +5,12 @@
 
 :root {
   color-scheme: light;
-  --paper: #f7f3ea;
-  --surface: #fffdf8;
-  --panel: #eeeae1;
-  --ink: #252c3b;
-  --muted: #5d625f;
-  --line: #d7d7ce;
+  --paper: #ffffff;
+  --surface: #fcfcfb;
+  --panel: #f5f5f3;
+  --ink: #30322f;
+  --muted: #686b65;
+  --line: #e5e6e2;
   --accent: #344cb7;
   --on-accent: #fff;
   --accent-soft: #e4e8fa;
@@ -21,12 +21,12 @@
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #131d29;
-  --surface: #182534;
-  --panel: #1d2c3c;
-  --ink: #edf1f5;
-  --muted: #b3c1cc;
-  --line: #3b4e60;
+  --paper: #202120;
+  --surface: #262725;
+  --panel: #292a28;
+  --ink: #ededeb;
+  --muted: #b0b3ab;
+  --line: #41433e;
   --accent: #bccaff;
   --on-accent: #172446;
   --accent-soft: #2b3e65;
@@ -329,23 +329,49 @@ input::placeholder {
 }
 .workspace {
   display: grid;
-  grid-template-columns: 256px minmax(0, 1fr);
+  grid-template-columns: 240px minmax(0, 1fr);
   min-height: 100svh;
 }
 .sidebar {
   border-right: 1px solid var(--line);
   background: var(--panel);
-  padding: 28px 20px 22px;
+  padding: 16px 10px;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 18px;
   position: sticky;
   top: 0;
   height: 100svh;
   overflow: auto;
 }
+.sidebar .brand {
+  font-size: 18px;
+  padding: 8px 10px;
+}
+.sidebar .brand-mark svg {
+  width: 22px;
+  height: 22px;
+}
+.page-document {
+  max-width: 820px;
+  margin-inline: auto;
+}
+.page-document:has(.db-workspace) {
+  max-width: none;
+}
+.page-document .button.secondary,
+.page-document .button.quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.page-document .button.secondary:hover,
+.page-document .button.quiet:hover {
+  background: var(--panel);
+  color: var(--ink);
+}
 .workspace-choice {
-  margin-top: 4px;
+  margin-top: 0;
 }
 .workspace-choice label {
   display: block;
@@ -354,22 +380,23 @@ input::placeholder {
   color: var(--muted);
 }
 .workspace-choice select {
-  background: var(--surface);
+  background: transparent;
+  border-color: transparent;
   font-size: 14px;
   font-weight: 600;
 }
 .nav-list {
   display: grid;
-  gap: 6px;
+  gap: 2px;
 }
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   color: var(--ink);
-  border-radius: 7px;
+  border-radius: 5px;
   text-decoration: none;
-  padding: 10px 12px;
+  padding: 6px 10px;
   font-size: 14px;
   min-height: 44px;
 }
@@ -377,18 +404,17 @@ input::placeholder {
   background: var(--surface);
 }
 .nav-link[aria-current="page"] {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--line);
+  color: var(--ink);
   font-weight: 600;
 }
 .sidebar-section {
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+  padding-top: 6px;
 }
 .sidebar-section h2 {
   font-size: 12px;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
   color: var(--muted);
   letter-spacing: 0;
 }
@@ -400,7 +426,7 @@ input::placeholder {
 .sidebar-bottom {
   margin-top: auto;
   border-top: 1px solid var(--line);
-  padding-top: 20px;
+  padding-top: 12px;
   display: grid;
   gap: 10px;
 }
@@ -438,14 +464,13 @@ input::placeholder {
   min-width: 0;
 }
 .topbar {
-  min-height: 72px;
-  padding: 12px 32px;
-  border-bottom: 1px solid var(--line);
+  min-height: 56px;
+  padding: 6px 24px;
   display: flex;
   gap: 16px;
   align-items: center;
   justify-content: space-between;
-  background: var(--surface);
+  background: var(--paper);
 }
 .breadcrumb {
   color: var(--muted);
@@ -466,8 +491,8 @@ input::placeholder {
   white-space: nowrap;
 }
 .workspace-main {
-  padding: clamp(32px, 6vw, 76px) clamp(24px, 7vw, 96px) 100px;
-  max-width: 1280px;
+  padding: clamp(28px, 4vw, 56px) clamp(24px, 5vw, 72px) 100px;
+  max-width: 1120px;
   margin: auto;
 }
 .document-heading {
@@ -623,7 +648,7 @@ dialog.sidebar::backdrop {
   .workspace.is-collapsed .sidebar {
     visibility: visible;
     width: min(300px, 85vw);
-    padding: 28px 20px 22px;
+    padding: 16px 10px;
   }
   .topbar {
     padding: 12px 18px;
@@ -656,6 +681,47 @@ dialog.sidebar::backdrop {
   .icon-button {
     transition:
       background-color 140ms ease-out,
-      color 140ms ease-out;
+      color 140ms ease-out,
+      border-color 140ms ease-out,
+      filter 140ms ease-out,
+      transform 100ms ease-out;
+  }
+  .button:active:not(:disabled),
+  .icon-button:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  dialog[open] {
+    animation: dialog-reveal 160ms ease-out;
+  }
+  @keyframes dialog-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
+.setup-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
+}
+.setup-content {
+  width: min(100%, 560px);
+  display: grid;
+  justify-items: start;
+  gap: 24px;
+}
+.setup-content .brand { margin-bottom: 48px; }
+.setup-status {
+  font-size: 13px;
+  color: var(--accent);
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+}
+.setup-content h1 { max-width: 510px; font-size: clamp(2.4rem, 7vw, 3.6rem); }
+.setup-content p { max-width: 480px; color: var(--muted); }

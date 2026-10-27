@@ -1,10 +1,11 @@
 "use client";
+
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { type PageSharing, type SharingCommand, sharingSchema } from "./model";
 import "./sharing.css";
 
-const labels = { owner: "Owner", editor: "Editor", commenter: "Comentarista", viewer: "Leitor" };
 type Target = { userId: string; label: string };
 export function ShareControl({
   pageId,
@@ -13,11 +14,13 @@ export function ShareControl({
   pageId: string;
   properties?: { id: string; name: string }[];
 }) {
+  const t = useTranslations();
+
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" className="button secondary" onClick={() => setOpen(true)}>
-        Compartilhar
+        {t("sharing.share")}
       </button>
       {open && (
         <ShareDialog key={pageId} pageId={pageId} properties={properties} onClose={() => setOpen(false)} />
@@ -34,6 +37,14 @@ function ShareDialog({
   properties: { id: string; name: string }[];
   onClose: () => void;
 }) {
+  const t = useTranslations();
+
+  const labels = {
+    owner: "Owner",
+    editor: t("sharing.editor"),
+    commenter: t("sharing.commenter"),
+    viewer: t("sharing.viewer"),
+  };
   const router = useRouter(),
     dialog = useRef<HTMLDialogElement>(null);
   const [data, setData] = useState<PageSharing | null>(null),
@@ -56,7 +67,7 @@ function ShareDialog({
       fetch(`${endpoint}?targets=1`, { signal: controller.signal, cache: "no-store" }),
     ])
       .then(async ([metadata, members]) => {
-        if (!metadata.ok || !members.ok) throw new Error("Apenas owners podem gerenciar o compartilhamento.");
+        if (!metadata.ok || !members.ok) throw new Error(t("sharing.ownersOnly"));
         const value = sharingSchema.parse(await metadata.json()),
           people: { items: Target[]; nextCursor: string | null } = await members.json();
         if (!controller.signal.aborted) {
@@ -68,14 +79,14 @@ function ShareDialog({
       })
       .catch((reason: unknown) => {
         if (!controller.signal.aborted)
-          setError(reason instanceof Error ? reason.message : "Compartilhamento indisponível.");
+          setError(reason instanceof Error ? reason.message : t("sharing.unavailable"));
       });
     return () => {
       controller.abort();
       element?.close();
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
-  }, [endpoint]);
+  }, [endpoint, t]);
   const mutate = async (command: SharingCommand) => {
     if (pending) return;
     setPending(true);
@@ -89,7 +100,7 @@ function ShareDialog({
       });
       const result = await response.json();
       if (!response.ok)
-        throw new Error(typeof result.error === "string" ? result.error : "Não foi possível salvar.");
+        throw new Error(typeof result.error === "string" ? result.error : t("database.saveFailed"));
       if (result.requiresConfirmation === true) {
         setPreview({ token: String(result.previewToken), count: Number(result.affectedPages) });
         return;
@@ -109,10 +120,10 @@ function ShareDialog({
       });
       setData(value);
       setPreview(null);
-      setNotice("Compartilhamento atualizado.");
+      setNotice(t("sharing.updated"));
       router.refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Não foi possível salvar.");
+      setError(reason instanceof Error ? reason.message : t("database.saveFailed"));
     } finally {
       setPending(false);
     }
@@ -128,14 +139,14 @@ function ShareDialog({
       }}
     >
       <header>
-        <h2 id="sharing-title">Compartilhar página</h2>
+        <h2 id="sharing-title">{t("sharing.sharePage")}</h2>
         <button type="button" onClick={onClose}>
-          Fechar
+          {t("common.close")}
         </button>
       </header>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
-      {!data && !error && <p role="status">Carregando acesso…</p>}
+      {!data && !error && <p role="status">{t("sharing.loading")}</p>}
       {data && (
         <>
           <form
@@ -160,10 +171,10 @@ function ShareDialog({
                 checked={data.restricted}
                 onChange={(event) => setData({ ...data, restricted: event.target.checked })}
               />
-              Restringir herança de acesso da página acima
+              {t("sharing.restrictInheritance")}
             </label>
             <label>
-              Acesso padrão para membros
+              {t("sharing.workspaceDefault")}
               <select
                 value={data.workspaceRole ?? ""}
                 onChange={(event) =>
@@ -175,38 +186,35 @@ function ShareDialog({
                   })
                 }
               >
-                <option value="">Somente pessoas autorizadas</option>
-                <option value="viewer">Leitor</option>
-                <option value="commenter">Comentarista</option>
-                <option value="editor">Editor</option>
+                <option value="">{t("sharing.authorizedOnly")}</option>
+                <option value="viewer">{t("sharing.viewer")}</option>
+                <option value="commenter">{t("sharing.commenter")}</option>
+                <option value="editor">{t("sharing.editor")}</option>
               </select>
             </label>
             <label>
-              Owner da página
+              {t("sharing.pageOwner")}
               <select
                 value={data.ownerId}
                 onChange={(event) => setData({ ...data, ownerId: event.target.value })}
               >
                 {!targets.some((target) => target.userId === data.ownerId) && (
-                  <option value={data.ownerId}>Owner atual</option>
+                  <option value={data.ownerId}>{t("sharing.currentOwner")}</option>
                 )}
                 {targets.map((target) => (
                   <option key={target.userId} value={target.userId}>
-                    {target.label}
+                    {target.label || t("common.member")}
                   </option>
                 ))}
               </select>
             </label>
-            <p>
-              O owner do workspace mantém a administração. Filhas podem herdar estas permissões; alterações
-              que afetam outros escopos exigem confirmação.
-            </p>
+            <p>{t("sharing.inheritanceNotice")}</p>
             <ul className="sharing-grants">
               {data.grants.map((grant) => (
                 <li key={grant.userId}>
-                  <span>{grant.label}</span>
+                  <span>{grant.label || t("common.member")}</span>
                   <select
-                    aria-label={`Papel de ${grant.label}`}
+                    aria-label={t("sharing.roleNamed", { name: grant.label || t("common.member") })}
                     value={grant.role}
                     onChange={(event) =>
                       setData({
@@ -235,20 +243,20 @@ function ShareDialog({
                       });
                     }}
                   >
-                    Remover
+                    {t("common.remove")}
                   </button>
                 </li>
               ))}
             </ul>
             <label>
-              Adicionar membro
+              {t("sharing.addMember")}
               <select value={person} onChange={(event) => setPerson(event.target.value)}>
-                <option value="">Escolher pessoa</option>
+                <option value="">{t("sharing.choosePerson")}</option>
                 {targets
                   .filter((target) => !data.grants.some((grant) => grant.userId === target.userId))
                   .map((target) => (
                     <option key={target.userId} value={target.userId}>
-                      {target.label}
+                      {target.label || t("common.member")}
                     </option>
                   ))}
               </select>
@@ -265,7 +273,7 @@ function ShareDialog({
                 }
               }}
             >
-              Adicionar como leitor
+              {t("sharing.addViewer")}
             </button>
             {after && (
               <button
@@ -281,31 +289,32 @@ function ShareDialog({
                     setTargets((previous) => [...previous, ...result.items]);
                     setAfter(result.nextCursor);
                   } catch {
-                    setError("Não foi possível carregar mais membros.");
+                    setError(t("sharing.moreMembersFailed"));
                   }
                 }}
               >
-                Carregar mais membros
+                {t("database.moreMembers")}
               </button>
             )}
             {preview && (
               <p className="sharing-preview" role="status">
-                Esta mudança alcança {preview.count} página(s). Confirme para aplicar a prévia de acesso.
+                {t("sharing.affectedCount", { count: preview.count })}
               </p>
             )}
             <button type="submit" disabled={pending}>
-              {pending ? "Salvando…" : preview ? "Confirmar mudança de acesso" : "Salvar acesso"}
+              {pending
+                ? t("common.saving")
+                : preview
+                  ? t("pages.confirmAccessChange")
+                  : t("sharing.saveAccess")}
             </button>
           </form>
           <section className="sharing-publication">
-            <h3>Link público somente leitura</h3>
-            <p>
-              A publicação é explícita. Subpáginas, registros, relações e bases inline precisam de publicação
-              própria para aparecer.
-            </p>
+            <h3>{t("sharing.publicLinkReadonly")}</h3>
+            <p>{t("sharing.explicitPublicationNotice")}</p>
             {properties.length > 0 && (
               <fieldset>
-                <legend>Campos da base publicados</legend>
+                <legend>{t("sharing.publishedFields")}</legend>
                 {properties.map((property) => (
                   <label key={property.id}>
                     <input
@@ -327,7 +336,7 @@ function ShareDialog({
             {data.publication && (
               <>
                 <label>
-                  Link público
+                  {t("sharing.publicLink")}
                   <input
                     readOnly
                     value={`${typeof window === "undefined" ? "" : window.location.origin}/s/${data.publication.token}`}
@@ -335,7 +344,7 @@ function ShareDialog({
                   />
                 </label>
                 <a href={`/s/${data.publication.token}`} target="_blank" rel="noopener noreferrer">
-                  Abrir página publicada
+                  {t("sharing.openPublishedPage")}
                 </a>
               </>
             )}
@@ -352,7 +361,7 @@ function ShareDialog({
                   })
                 }
               >
-                {data.publication ? "Atualizar publicação" : "Publicar página"}
+                {data.publication ? t("sharing.updatePublication") : t("sharing.publishPage")}
               </button>
               {data.publication && (
                 <>
@@ -369,7 +378,7 @@ function ShareDialog({
                       })
                     }
                   >
-                    Trocar link
+                    {t("sharing.rotateLink")}
                   </button>
                   <button
                     type="button"
@@ -383,7 +392,7 @@ function ShareDialog({
                       })
                     }
                   >
-                    Revogar publicação
+                    {t("sharing.revokePublication")}
                   </button>
                 </>
               )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { type BlockCommand, filterBlockCommands } from "./command-catalog";
 import { useInlineMenuAria } from "./use-inline-menu-aria";
 
@@ -31,14 +32,15 @@ export function CommandMenu({
   anchor,
   onChoose,
   onClose,
-  label = "Adicionar bloco",
+  label,
   id,
   anchorElement,
 }: CommandMenuProps) {
+  const t = useTranslations();
   const generatedId = useId();
   const { left, top } = anchor;
   const listId = id ?? `block-commands-${generatedId}`;
-  const commands = useMemo(() => filterBlockCommands(query), [query]);
+  const commands = useMemo(() => filterBlockCommands(query, t), [query, t]);
   const [selection, setSelection] = useState({ query, id: commands[0]?.id });
   const selectedIndex =
     selection.query === query ? commands.findIndex((command) => command.id === selection.id) : 0;
@@ -120,12 +122,12 @@ export function CommandMenu({
 
   return (
     <div ref={menu} className="editor-command-menu" style={{ left: position.left, top: position.top }}>
-      <div className="editor-command-menu-title">{label}</div>
+      <div className="editor-command-menu-title">{label ?? t("editor.addBlock")}</div>
       <div
         id={listId}
         role="listbox"
         tabIndex={-1}
-        aria-label={label}
+        aria-label={label ?? t("editor.addBlock")}
         aria-activedescendant={active ? `${listId}-option-${active.id}` : undefined}
       >
         {groups.map((group) => (
@@ -156,11 +158,11 @@ export function CommandMenu({
       </div>
       {!commands.length && (
         <p className="editor-command-empty" role="status">
-          Nenhum bloco encontrado. Continue escrevendo ou pressione Esc.
+          {t("editor.noCommands")}
         </p>
       )}
       <div className="editor-command-hint" aria-hidden="true">
-        ↑↓ navegar · Enter inserir · Esc fechar
+        {t("editor.commandKeys")}
       </div>
     </div>
   );

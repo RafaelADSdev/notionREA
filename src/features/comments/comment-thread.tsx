@@ -1,5 +1,7 @@
 "use client";
+
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   commentAccessLost,
   commentErrorMessage,
@@ -27,6 +29,8 @@ function CommentItem({
   onDenied: () => void;
   onDraft: (key: string, body: string) => void;
 }) {
+  const t = useTranslations();
+
   const [editing, setEditing] = useState(false),
     [draft, setDraft] = useState(comment.body),
     [pending, setPending] = useState(false),
@@ -39,7 +43,7 @@ function CommentItem({
   const act = async (remove: boolean) => {
     if (pending || !own) return;
     if (!remove && !commentBody.safeParse(draft).success) {
-      setError("Escreva até 8 KiB de texto.");
+      setError(t("comments.writeLimit"));
       return;
     }
     setPending(true);
@@ -51,7 +55,7 @@ function CommentItem({
       onDraft(`edit:${comment.id}`, "");
       await onChanged();
     } catch (error) {
-      setError(commentErrorMessage(error));
+      setError(commentErrorMessage(error, t));
       if (commentAccessLost(error)) onDenied();
     } finally {
       setPending(false);
@@ -60,9 +64,9 @@ function CommentItem({
   return (
     <li className="comment-item">
       <div className="comment-byline">
-        <strong>{comment.authorLabel || "Membro"}</strong>
+        <strong>{comment.authorLabel || t("common.member")}</strong>
         <time dateTime={comment.createdAt}>
-          {new Date(comment.createdAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+          {new Date(comment.createdAt).toLocaleString(t.locale, { dateStyle: "short", timeStyle: "short" })}
         </time>
       </div>
       {editing ? (
@@ -72,7 +76,7 @@ function CommentItem({
             void act(false);
           }}
         >
-          <label htmlFor={id}>Editar meu comentário</label>
+          <label htmlFor={id}>{t("comments.editOwn")}</label>
           <textarea
             ref={field}
             id={id}
@@ -87,7 +91,7 @@ function CommentItem({
           />
           <div className="comment-actions">
             <button type="submit" disabled={pending || !own}>
-              Salvar comentário
+              {t("comments.save")}
             </button>
             <button
               type="button"
@@ -97,7 +101,7 @@ function CommentItem({
                 onDraft(`edit:${comment.id}`, "");
               }}
             >
-              Cancelar edição
+              {t("comments.cancelEdit")}
             </button>
           </div>
         </form>
@@ -114,10 +118,10 @@ function CommentItem({
               setEditing(true);
             }}
           >
-            Editar comentário
+            {t("comments.edit")}
           </button>
           <button type="button" disabled={pending} onClick={() => void act(true)}>
-            Excluir comentário
+            {t("comments.delete")}
           </button>
         </div>
       )}
@@ -141,6 +145,8 @@ export function CommentThreadView({
   onDenied: () => void;
   onDraft: (key: string, body: string) => void;
 }) {
+  const t = useTranslations();
+
   const [open, setOpen] = useState(false),
     [comments, setComments] = useState<Comment[]>([]),
     [cursor, setCursor] = useState<string | null>(null);
@@ -172,14 +178,14 @@ export function CommentThreadView({
         setLoaded(true);
       } catch (error) {
         if (!signal?.aborted) {
-          setError(commentErrorMessage(error));
+          setError(commentErrorMessage(error, t));
           if (commentAccessLost(error)) onDenied();
         }
       } finally {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [thread.id, onDenied],
+    [thread.id, onDenied, t],
   );
   useEffect(() => {
     if (!open) return;
@@ -196,27 +202,20 @@ export function CommentThreadView({
   return (
     <li className="comment-thread" data-resolved={thread.resolved || undefined}>
       <div className="comment-thread-heading">
-        <strong>{thread.authorLabel || "Membro"}</strong>
+        <strong>{thread.authorLabel || t("common.member")}</strong>
         <span>{thread.resolved ? "Resolvida" : "Aberta"}</span>
         <button type="button" aria-expanded={open} aria-controls={region} onClick={() => setOpen(!open)}>
-          {open ? "Fechar conversa" : "Abrir conversa"}
+          {open ? t("comments.closeThread") : t("comments.openThread")}
         </button>
       </div>
       <p className="comment-context">
-        {thread.blockId ? "Comentário de bloco" : "Comentário da página"}
-        {!thread.anchorAvailable ? " · Bloco ou trecho indisponível" : ""}
+        {thread.blockId ? t("comments.blockComment") : t("comments.pageComment")}
+        {!thread.anchorAvailable ? t("comments.anchorUnavailableSuffix") : ""}
       </p>
       {thread.blockId && thread.anchorAvailable && (
         <button
           type="button"
           onClick={() => {
-            const frame = document.querySelector<HTMLElement>(`[data-editor-block="${thread.blockId}"]`);
-            if (!frame) {
-              setError("O bloco está recolhido ou indisponível nesta visualização.");
-              return;
-            }
-            frame.focus();
-            frame.scrollIntoView({ block: "center" });
             document.dispatchEvent(
               new CustomEvent("bloco:comment-anchor", {
                 detail: { pageId: thread.pageId, blockId: thread.blockId, anchor: thread.anchor },
@@ -224,7 +223,7 @@ export function CommentThreadView({
             );
           }}
         >
-          Ir ao bloco
+          {t("comments.goToBlock")}
         </button>
       )}
       {!open && (loaded ? comments[0] : thread.preview) && (
@@ -232,7 +231,7 @@ export function CommentThreadView({
       )}
       {open && (
         <div id={region} className="comment-replies" aria-busy={loading || pending}>
-          {loading && !comments.length && <p role="status">Carregando conversa…</p>}
+          {loading && !comments.length && <p role="status">{t("comments.loadingThread")}</p>}
           <ol>
             {comments.map((comment) => (
               <CommentItem
@@ -245,15 +244,15 @@ export function CommentThreadView({
               />
             ))}
           </ol>
-          {!comments.length && !loading && <p>Esta conversa não tem comentários visíveis.</p>}
+          {!comments.length && !loading && <p>{t("comments.noReplies")}</p>}
           {cursor && (
             <button type="button" disabled={loading} onClick={() => void load(cursor)}>
-              Mais respostas
+              {t("comments.moreReplies")}
             </button>
           )}
           <div className="comment-actions">
             <button type="button" disabled={loading} onClick={() => void load()}>
-              Atualizar conversa
+              {t("comments.refreshThread")}
             </button>
             {canResolve && (
               <button
@@ -269,13 +268,13 @@ export function CommentThreadView({
                   })
                     .then(onChanged)
                     .catch((error) => {
-                      setError(commentErrorMessage(error));
+                      setError(commentErrorMessage(error, t));
                       if (commentAccessLost(error)) onDenied();
                     })
                     .finally(() => setPending(false));
                 }}
               >
-                {thread.resolved ? "Reabrir conversa" : "Resolver conversa"}
+                {thread.resolved ? t("comments.reopen") : t("comments.resolve")}
               </button>
             )}
           </div>
@@ -292,7 +291,7 @@ export function CommentThreadView({
                   await changed();
                   return true;
                 } catch (error) {
-                  setError(commentErrorMessage(error));
+                  setError(commentErrorMessage(error, t));
                   if (commentAccessLost(error)) onDenied();
                   return false;
                 }

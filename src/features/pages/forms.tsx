@@ -1,11 +1,14 @@
 "use client";
+
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icon";
+import { useTranslations } from "@/lib/i18n/client";
 import { favoritePage, movePage, restorePage, savePageMetadata, trashPage } from "./actions";
-import { findPages, type SearchResult } from "./search";
 import type { PageActionState, PageSummary } from "./model/validation";
+import { findPages, type SearchResult } from "./search";
 
 function Feedback({ state }: { state: PageActionState }) {
+  const t = useTranslations();
   const element = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
     if (state.error || state.message) element.current?.focus();
@@ -18,7 +21,7 @@ function Feedback({ state }: { state: PageActionState }) {
       className={`form-feedback${state.error ? " error" : ""}`}
     >
       {state.error ?? state.message}
-      {state.affectedPages !== undefined && ` Páginas afetadas: ${state.affectedPages}.`}
+      {state.affectedPages !== undefined && t("pages.affectedCount", { count: state.affectedPages })}
     </p>
   ) : null;
 }
@@ -46,6 +49,8 @@ export function PageMetadataForm({
   workspaceId: string;
   focusTitle: boolean;
 }) {
+  const t = useTranslations();
+
   const [state, action, pending] = useActionState(savePageMetadata, {});
   const title = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -56,10 +61,10 @@ export function PageMetadataForm({
       <Identity page={page} workspaceId={workspaceId} />
       <div className="page-title-row">
         <label className="page-icon-field">
-          Ícone da página
+          <span className="sr-only">{t("pages.icon")}</span>
           <input
             name="icon"
-            aria-label="Ícone da página"
+            aria-label={t("pages.icon")}
             defaultValue={page.icon}
             maxLength={16}
             placeholder="📝"
@@ -67,20 +72,20 @@ export function PageMetadataForm({
           />
         </label>
         <label className="page-title-field">
-          <span className="sr-only">Nome da página</span>
+          <span className="sr-only">{t("pages.name")}</span>
           <input
             ref={title}
             name="title"
             defaultValue={page.title}
-            placeholder="Página sem título"
+            placeholder={t("pages.untitled")}
             maxLength={500}
           />
         </label>
       </div>
       <div className="page-save-row">
-        <span className="notice">Título e ícone da página</span>
+        <span className="notice">{t("pages.titleAndIcon")}</span>
         <button type="submit" className="button secondary" disabled={pending}>
-          {pending ? "Salvando…" : "Salvar página"}
+          {pending ? t("common.saving") : t("pages.save")}
         </button>
       </div>
       <Feedback state={state} />
@@ -96,6 +101,8 @@ export function FavoriteButton({
   workspaceId: string;
   initial: boolean;
 }) {
+  const t = useTranslations();
+
   const [favorite, setFavorite] = useState(initial);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
@@ -104,7 +111,7 @@ export function FavoriteButton({
       <button
         type="button"
         className="icon-button favorite-button"
-        aria-label={favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+        aria-label={favorite ? t("pages.removeFavorite") : t("pages.addFavorite")}
         aria-pressed={favorite}
         disabled={pending}
         onClick={() =>
@@ -113,7 +120,7 @@ export function FavoriteButton({
               setFavorite(await favoritePage(pageId, workspaceId));
               setError("");
             } catch {
-              setError("Não foi possível atualizar o favorito.");
+              setError(t("pages.favoriteFailed"));
             }
           })
         }
@@ -138,6 +145,8 @@ function DestinationPicker({
   pageId: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations();
+
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<SearchResult[]>([]);
   const [selected, setSelected] = useState<SearchResult | null>(null);
@@ -146,48 +155,48 @@ function DestinationPicker({
     if (disabled) return;
     const controller = new AbortController();
     const timer = setTimeout(() => {
-      findPages(workspaceId, query, controller.signal)
+      findPages(workspaceId, query, controller.signal, undefined, t.locale)
         .then((result) => {
           setItems(result.items.filter((item) => item.id !== pageId));
           setError("");
         })
         .catch(() => {
-          if (!controller.signal.aborted) setError("Não foi possível carregar os destinos.");
+          if (!controller.signal.aborted) setError(t("pages.destinationsFailed"));
         });
     }, 180);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [workspaceId, pageId, query, disabled]);
+  }, [workspaceId, pageId, query, disabled, t]);
   return (
     <div className="destination-fields">
       <label className="field">
-        Buscar destino
+        {t("pages.searchDestination")}
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           maxLength={200}
           disabled={disabled}
-          placeholder="Encontre uma página pelo título"
+          placeholder={t("pages.destinationPlaceholder")}
         />
       </label>
       <label className="field">
-        Mover para
+        {t("common.moveTo")}
         <select
           name="parentId"
-          aria-label="Mover para"
+          aria-label={t("common.moveTo")}
           value={selected?.id ?? ""}
           onChange={(event) => setSelected(items.find((item) => item.id === event.target.value) ?? null)}
           disabled={disabled}
         >
-          <option value="">Raiz do workspace</option>
+          <option value="">{t("pages.workspaceRoot")}</option>
           {selected && !items.some((item) => item.id === selected.id) && (
-            <option value={selected.id}>{selected.title || "Página sem título"}</option>
+            <option value={selected.id}>{selected.title || t("pages.untitled")}</option>
           )}
           {items.map((item) => (
             <option key={item.id} value={item.id}>
-              {item.title || "Página sem título"}
+              {item.title || t("pages.untitled")}
             </option>
           ))}
         </select>
@@ -201,17 +210,21 @@ function DestinationPicker({
   );
 }
 function AccessConfirmation({ state }: { state: PageActionState }) {
+  const t = useTranslations();
+
   return state.requiresConfirmation ? (
     <>
       <input type="hidden" name="previewHash" value={state.previewHash ?? ""} />
       <label className="checkbox-field">
         <input type="checkbox" name="confirmAccess" required />
-        Confirmo a mudança de acesso
+        {t("pages.confirmAccess")}
       </label>
     </>
   ) : null;
 }
 export function MovePageForm({ page, workspaceId }: { page: PageSummary; workspaceId: string }) {
+  const t = useTranslations();
+
   const [state, action, pending] = useActionState(movePage, {});
   return (
     <form
@@ -228,32 +241,30 @@ export function MovePageForm({ page, workspaceId }: { page: PageSummary; workspa
     >
       <Identity page={page} workspaceId={workspaceId} />
       <DestinationPicker workspaceId={workspaceId} pageId={page.id} />
-      <p className="notice">
-        A página será colocada no fim do destino. Mudanças de acesso exigem prévia e confirmação.
-      </p>
+      <p className="notice">{t("pages.moveEndNotice")}</p>
       <Feedback state={state} />
       <AccessConfirmation state={state} />
       <button type="submit" className="button secondary" disabled={pending}>
-        {pending ? "Movendo…" : "Mover página"}
+        {pending ? "Movendo…" : t("pages.movePage")}
       </button>
     </form>
   );
 }
 export function TrashPageForm({ page, workspaceId }: { page: PageSummary; workspaceId: string }) {
+  const t = useTranslations();
+
   const [state, action, pending] = useActionState(trashPage, {});
   return (
     <form action={action} className="form-stack">
       <Identity page={page} workspaceId={workspaceId} />
-      <p className="notice">
-        A página e suas filhas ativas sairão da navegação e da busca. Você poderá restaurá-las pela lixeira.
-      </p>
+      <p className="notice">{t("pages.trashNotice")}</p>
       <label className="checkbox-field">
         <input type="checkbox" name="confirmTrash" required />
-        Mover esta página e suas filhas para a lixeira
+        {t("pages.trashChildren")}
       </label>
       <Feedback state={state} />
       <button type="submit" className="button danger" disabled={pending}>
-        {pending ? "Movendo…" : "Mover para a lixeira"}
+        {pending ? "Movendo…" : t("pages.moveToTrash")}
       </button>
     </form>
   );
@@ -265,6 +276,8 @@ export function RestorePageForm({
   page: Pick<PageSummary, "id" | "revision">;
   workspaceId: string;
 }) {
+  const t = useTranslations();
+
   const [state, action, pending] = useActionState(restorePage, {});
   const [original, setOriginal] = useState(true);
   return (
@@ -277,13 +290,13 @@ export function RestorePageForm({
           checked={original}
           onChange={(event) => setOriginal(event.target.checked)}
         />
-        Usar local original
+        {t("pages.originalLocation")}
       </label>
       {!original && <DestinationPicker workspaceId={workspaceId} pageId={page.id} />}
       <Feedback state={state} />
       <AccessConfirmation state={state} />
       <button type="submit" className="button secondary" disabled={pending}>
-        {pending ? "Restaurando…" : "Restaurar página"}
+        {pending ? "Restaurando…" : t("pages.restore")}
       </button>
     </form>
   );

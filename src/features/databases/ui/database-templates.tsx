@@ -1,5 +1,7 @@
 "use client";
+
 import { useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import type { DatabaseData, DatabaseTemplate } from "../types";
 import { DatabaseDialog } from "./database-dialog";
 import type { RunCommand } from "./database-value";
@@ -15,6 +17,8 @@ function TemplateRow({
   onOpen: (id: string) => void;
   onRemove: (template: DatabaseTemplate) => void;
 }) {
+  const t = useTranslations();
+
   const [title, setTitle] = useState(template.title);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -25,13 +29,13 @@ function TemplateRow({
       const result = await run({
         action: "template",
         id: duplicate ? null : template.id,
-        title: duplicate ? `${template.title} (cópia)` : title,
+        title: duplicate ? `${template.title}${t("database.copySuffix")}` : title,
         expectedRevision: duplicate ? 0 : template.revision,
         ...(duplicate ? { pageId: template.pageId } : {}),
       });
-      if (!result.ok) setError("Não foi possível salvar o template. Atualize os dados e tente novamente.");
+      if (!result.ok) setError(t("database.saveTemplateRefreshFailed"));
     } catch {
-      setError("Não foi possível salvar o template.");
+      setError(t("database.saveTemplateFailed"));
     } finally {
       setPending(false);
     }
@@ -46,20 +50,20 @@ function TemplateRow({
         }}
       >
         <label>
-          Nome do template
+          {t("database.templateName")}
           <input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <button disabled={pending} type="submit">
-          Renomear
+          {t("common.rename")}
         </button>
         <button type="button" onClick={() => onOpen(template.pageId)}>
-          Editar corpo e padrões
+          {t("database.editTemplateBody")}
         </button>
         <button type="button" disabled={pending} onClick={() => void save(true)}>
-          Duplicar
+          {t("common.duplicate")}
         </button>
         <button type="button" disabled={pending} onClick={() => onRemove(template)}>
-          Excluir
+          {t("common.delete")}
         </button>
       </form>
       {error && <p role="alert">{error}</p>}
@@ -75,17 +79,16 @@ export function TemplatePanel({
   run: RunCommand;
   onOpen: (id: string) => void;
 }) {
+  const t = useTranslations();
+
   const [title, setTitle] = useState("");
   const [pending, setPending] = useState(false);
   const [removal, setRemoval] = useState<DatabaseTemplate | null>(null);
   const [error, setError] = useState("");
   return (
     <details className="db-panel">
-      <summary>Templates da base</summary>
-      <p>
-        Edite o corpo e as propriedades da página de template para definir os padrões. Novos registros recebem
-        identidades próprias; registros existentes não são alterados.
-      </p>
+      <summary>{t("database.templates")}</summary>
+      <p>{t("database.templateNotice")}</p>
       <ul className="db-template-list">
         {data.templates.map((template) => (
           <TemplateRow
@@ -97,7 +100,7 @@ export function TemplatePanel({
           />
         ))}
       </ul>
-      {!data.templates.length && <p>Ainda não há templates.</p>}
+      {!data.templates.length && <p>{t("database.noTemplates")}</p>}
       <form
         className="db-inline-form"
         onSubmit={(event) => {
@@ -107,13 +110,13 @@ export function TemplatePanel({
             setError("");
             try {
               const result = await run({ action: "template", id: null, title, expectedRevision: 0 });
-              if (!result.ok) setError("Não foi possível criar o template.");
+              if (!result.ok) setError(t("database.createTemplateFailed"));
               else {
                 setTitle("");
                 if (result.pageId) onOpen(result.pageId);
               }
             } catch {
-              setError("Não foi possível criar o template.");
+              setError(t("database.createTemplateFailed"));
             } finally {
               setPending(false);
             }
@@ -122,17 +125,17 @@ export function TemplatePanel({
         }}
       >
         <label>
-          Novo template
+          {t("database.newTemplate")}
           <input required maxLength={120} value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
         <button disabled={pending} type="submit">
-          Criar template
+          {t("database.createTemplate")}
         </button>
       </form>
       {error && <p role="alert">{error}</p>}
       {removal && (
-        <DatabaseDialog title="Excluir template?" onClose={() => setRemoval(null)}>
-          <p>O template será removido. Os registros criados a partir dele serão mantidos.</p>
+        <DatabaseDialog title={t("database.deleteTemplateQuestion")} onClose={() => setRemoval(null)}>
+          <p>{t("database.deleteTemplateNotice")}</p>
           <div className="db-actions">
             <button
               type="button"
@@ -142,16 +145,16 @@ export function TemplatePanel({
                 void run({ action: "deleteTemplate", id: removal.id, expectedRevision: removal.revision })
                   .then((result) => {
                     if (result.ok) setRemoval(null);
-                    else setError("Não foi possível excluir o template.");
+                    else setError(t("database.deleteTemplateFailed"));
                   })
-                  .catch(() => setError("Não foi possível excluir o template."))
+                  .catch(() => setError(t("database.deleteTemplateFailed")))
                   .finally(() => setPending(false));
               }}
             >
-              Excluir template
+              {t("database.deleteTemplate")}
             </button>
             <button type="button" onClick={() => setRemoval(null)}>
-              Cancelar
+              {t("common.cancel")}
             </button>
           </div>
         </DatabaseDialog>

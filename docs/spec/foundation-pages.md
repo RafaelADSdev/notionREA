@@ -5,6 +5,7 @@ Origem D: missão e ADR-004/005/006/008/009. Critérios descrevem o produto pró
 ## M1 — identidade e workspace
 
 - Cadastro por e-mail e senha, confirmação de e-mail, login, logout e recuperação de senha via Supabase Auth; login Google por OAuth. Sessão verificada no servidor, cookies seguros e redirects restritos a destinos permitidos. Não vincular automaticamente provedores por comparação caseira de e-mails.
+- Exceção local solicitada posteriormente: prévia opcional sem formulário, limitada a loopback nas portas pessoais e conta sintética separada, conforme ADR-038. Não altera autenticação remota, RLS ou sessões pessoais existentes.
 - Após autenticação sem vínculo, criar workspace com nome informado e transação que estabelece seu primeiro owner. Erro ou repetição não deixa workspace órfão nem cria cópias.
 - Workspace tem owner e membros. Owner administra convites, vínculos e transferência de administração; o último owner não pode sair ou ser removido sem sucessor. Não há exclusão definitiva de workspace na UI do MVP.
 - Convite usa link de uso único, expira em sete dias e é vinculado ao e-mail confirmado. O owner copia o link; envio automático de convite não é obrigatório. Token guardado apenas como hash; não registrar em logs. Reenvio revoga o anterior.

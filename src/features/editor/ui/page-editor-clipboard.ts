@@ -2,6 +2,7 @@ import { type Editor, getSchema } from "@tiptap/core";
 import { DOMParser as SchemaParser } from "@tiptap/pm/model";
 import { prosemirrorJSONToYXmlFragment } from "@tiptap/y-tiptap";
 import { z } from "zod";
+import { createTranslator, DEFAULT_LOCALE, type Translator } from "@/lib/i18n/core";
 import { insertBlock, orderedBlocks, removeBlockSelection } from "../model/block-commands";
 import { blockTypeSchema, validateBlockAttributes } from "../model/block-schema";
 import { MAX_CONTENT_BYTES } from "../model/content-limits";
@@ -79,14 +80,17 @@ export function selectedClipboard(
   return { version: 1, sourcePageId, blocks };
 }
 
-export function clipboardPlainText(value: BlockClipboard): string {
+export function clipboardPlainText(
+  value: BlockClipboard,
+  t: Translator = createTranslator(DEFAULT_LOCALE),
+): string {
   return value.blocks
     .filter((block) => !["table", "tableRow", "columns", "column"].includes(block.type))
     .map((block) =>
       block.type === "image"
-        ? "[Imagem]"
+        ? `[${t("editor.image")}]`
         : block.type === "file"
-          ? "[Arquivo]"
+          ? `[${t("editor.file")}]`
           : block.content.content
               .flatMap((paragraph) =>
                 paragraph.content.map((inline) =>
@@ -94,7 +98,7 @@ export function clipboardPlainText(value: BlockClipboard): string {
                     ? inline.text
                     : inline.type === "hardBreak"
                       ? "\n"
-                      : "Referência de página",
+                      : t("editor.referencePage"),
                 ),
               )
               .join(""),

@@ -1,11 +1,14 @@
 import Link from "next/link";
-export default function NotFound() {
+import { getTranslations } from "@/lib/i18n/server";
+export default async function NotFound() {
+  const t = await getTranslations();
+
   return (
     <main id="main" className="workspace-main">
-      <h1>Este espaço não está disponível.</h1>
-      <p className="notice">O endereço pode ter mudado ou sua conta não tem acesso.</p>
+      <h1>{t("errors.unavailable")}</h1>
+      <p className="notice">{t("errors.addressOrAccess")}</p>
       <Link className="button" href="/" style={{ marginTop: 24 }}>
-        Voltar ao início
+        {t("common.backHome")}
       </Link>
     </main>
   );

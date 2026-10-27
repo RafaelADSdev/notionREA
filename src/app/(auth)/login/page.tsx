@@ -1,24 +1,32 @@
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/features/auth/auth-form";
-import { currentUser } from "@/lib/supabase/server";
-import { getEnvironment } from "@/lib/env";
+import { isLocalPreviewEnabled } from "@/features/auth/local-preview-policy";
 import { safeRedirect } from "@/features/auth/validation";
+import { getEnvironment } from "@/lib/env";
+import { getTranslations } from "@/lib/i18n/server";
+import { currentUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Entrar" };
+export async function generateMetadata() {
+  const t = await getTranslations();
+  return { title: t("auth.signIn") };
+}
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ next?: string; status?: string }>;
 }) {
+  const t = await getTranslations();
+
   if (await currentUser()) redirect("/");
+  if (isLocalPreviewEnabled(getEnvironment())) redirect("/auth/local");
   const query = await searchParams;
   return (
     <>
-      <h1>Bom ter você aqui.</h1>
-      <p>Entre no seu espaço e continue de onde parou.</p>
+      <h1>{t("auth.welcomeBack")}</h1>
+      <p>{t("auth.continueWhereLeft")}</p>
       {query.status === "callback-error" && (
         <p role="alert" className="form-feedback error">
-          Este link não pôde ser confirmado. Solicite outro ou entre com sua senha.
+          {t("auth.callbackFailed")}
         </p>
       )}
       <AuthForm

@@ -3,11 +3,14 @@
 import { type Editor, getMarkRange } from "@tiptap/core";
 import { type Selection, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { useEffect, useId, useRef, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { isSafeContentLink } from "../model/content-schema";
 
 export type LinkDialogProps = { editor: Editor | null; open: boolean; onClose: () => void };
 
 function OpenLinkDialog({ editor, onClose }: Omit<LinkDialogProps, "open">) {
+  const t = useTranslations();
+
   const dialog = useRef<HTMLDialogElement>(null);
   const hrefInput = useRef<HTMLInputElement>(null);
   const labelInput = useRef<HTMLInputElement>(null);
@@ -88,7 +91,7 @@ function OpenLinkDialog({ editor, onClose }: Omit<LinkDialogProps, "open">) {
           event.preventDefault();
           const href = hrefInput.current?.value ?? "";
           if (href.length > 4096 || !isSafeContentLink(href)) {
-            setError("Informe um endereço válido com http, https, mailto ou tel.");
+            setError(t("editor.validLink"));
             hrefInput.current?.focus();
             return;
           }
@@ -103,8 +106,8 @@ function OpenLinkDialog({ editor, onClose }: Omit<LinkDialogProps, "open">) {
           close();
         }}
       >
-        <h2 id={`${id}-title`}>{initial.href ? "Editar link" : "Adicionar link"}</h2>
-        <label htmlFor={`${id}-href`}>Endereço do link</label>
+        <h2 id={`${id}-title`}>{initial.href ? t("editor.editLink") : t("editor.addLink")}</h2>
+        <label htmlFor={`${id}-href`}>{t("editor.linkAddress")}</label>
         <input
           ref={hrefInput}
           id={`${id}-href`}
@@ -119,14 +122,14 @@ function OpenLinkDialog({ editor, onClose }: Omit<LinkDialogProps, "open">) {
         />
         {initial.insert && (
           <>
-            <label htmlFor={`${id}-label`}>Texto do link</label>
+            <label htmlFor={`${id}-label`}>{t("editor.linkText")}</label>
             <input
               ref={labelInput}
               id={`${id}-label`}
               name="label"
               type="text"
               maxLength={4096}
-              placeholder="Use o endereço ou escreva um texto"
+              placeholder={t("editor.linkTextPlaceholder")}
             />
           </>
         )}
@@ -144,14 +147,14 @@ function OpenLinkDialog({ editor, onClose }: Omit<LinkDialogProps, "open">) {
                 close();
               }}
             >
-              Remover link
+              {t("editor.removeLink")}
             </button>
           )}
           <button type="button" onClick={close}>
-            Cancelar
+            {t("common.cancel")}
           </button>
           <button type="submit" disabled={!editor || editor.isDestroyed || !editor.isEditable}>
-            Salvar link
+            {t("editor.saveLink")}
           </button>
         </div>
       </form>

@@ -32,6 +32,7 @@ Abra [Bloco local](http://127.0.0.1:3000). Mensagens de confirmação e recupera
 | `pnpm test:spike` | Provas focadas de colaboração |
 | `pnpm test:integration` | Integração local de durabilidade, concorrência e autorização |
 | `pnpm test:perf` | Orçamento de 500 ms p95 em busca/listagem com 10 mil páginas sintéticas |
+| `pnpm test:perf:databases` | Consultas autenticadas com 50 mil registros, filtro, ordenação e cursor |
 | `pnpm test:perf:editor` | Validar 5.000 blocos e lotes causais no worker real já compilado |
 | `pnpm test:rls` | Testes de políticas e integridade no banco local |
 | `pnpm test:e2e` | Fluxos reais de navegador contra a stack local |
@@ -57,5 +58,8 @@ Rotas em `src/app/`, domínios em `src/features/`, infraestrutura em `src/lib/`,
 - [Especificação funcional](docs/spec/README.md)
 - [Decisões de armazenamento](docs/adr/ADR-001-content-storage.md)
 - [Preparação do ambiente](docs/setup.md)
+- [Guia de uso](docs/user-guide.md)
+- [Preparação de deploy](docs/deploy.md)
+- [Operação e recuperação](docs/operations.md)
 
 Toda implementação parte da especificação e de documentação pública, sem reutilização de código ou identidade da referência. A configuração Google depende de credenciais próprias e validação real do provedor; um teste simulado não comprova esse fluxo. Não há push ou deploy automático neste trabalho.

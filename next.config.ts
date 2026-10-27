@@ -8,7 +8,11 @@ const config: NextConfig = {
   },
   poweredByHeader: false,
   serverExternalPackages: ["yjs"],
-  outputFileTracingIncludes: { "/api/documents/*": ["./.editor-runtime/validation-worker.mjs"] },
+  outputFileTracingIncludes: {
+    "/api/documents/*": ["./.editor-runtime/validation-worker.mjs"],
+    "/api/databases/*": ["./.editor-runtime/validation-worker.mjs"],
+    "/api/interchange/*": ["./.editor-runtime/validation-worker.mjs"],
+  },
   logging: {
     incomingRequests: { ignore: [/\/auth\/callback/, /^\/s\//, /^\/api\/public\//] },
     fetches: { fullUrl: false },

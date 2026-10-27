@@ -1,5 +1,7 @@
 "use client";
+
 import { useContext, useRef, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import type { DatabaseReference } from "../types";
 import { ReferenceSearchContext } from "./database-context";
 
@@ -18,6 +20,8 @@ export function RelationPicker({
   disabled?: boolean;
   onChange: (value: string[]) => void;
 }) {
+  const t = useTranslations();
+
   const find = useContext(ReferenceSearchContext);
   const [query, setQuery] = useState("");
   const [items, setItems] = useState(initial.filter((item) => item.databaseId === targetDatabaseId));
@@ -43,7 +47,7 @@ export function RelationPicker({
       setKnown((current) => [...new Map([...current, ...incoming].map((item) => [item.id, item])).values()]);
       setCursor(result.nextCursor);
     } catch {
-      if (sequence === request.current) setError("Não foi possível consultar os registros autorizados.");
+      if (sequence === request.current) setError(t("database.referencesFailed"));
     } finally {
       if (sequence === request.current) setPending(false);
     }
@@ -52,7 +56,7 @@ export function RelationPicker({
     <fieldset className="db-reference-picker" disabled={disabled}>
       <legend>{name}</legend>
       <label>
-        Buscar registros
+        {t("database.searchRecords")}
         <input
           value={query}
           maxLength={200}
@@ -68,12 +72,13 @@ export function RelationPicker({
       </label>
       {find && (
         <button disabled={pending} type="button" onClick={() => void search()}>
-          Buscar
+          {t("common.search")}
         </button>
       )}
       {items
         .filter(
-          (item) => find || item.label.toLocaleLowerCase("pt-BR").includes(query.toLocaleLowerCase("pt-BR")),
+          (item) =>
+            find || item.label.toLocaleLowerCase(t.locale).includes(query.toLocaleLowerCase(t.locale)),
         )
         .map((item) => (
           <label key={item.id}>
@@ -98,17 +103,17 @@ export function RelationPicker({
               checked
               onChange={() => onChange(selected.filter((item) => item !== id))}
             />
-            {known.find((item) => item.id === id)?.label ?? "Referência indisponível"}
+            {known.find((item) => item.id === id)?.label ?? t("editor.referenceUnavailable")}
           </label>
         ))}
       {cursor && (
         <button type="button" disabled={pending} onClick={() => void search(cursor)}>
-          Mais resultados
+          {t("pages.moreResults")}
         </button>
       )}
-      {pending && <p role="status">Buscando…</p>}
+      {pending && <p role="status">{t("common.searching")}</p>}
       {error && <p role="alert">{error}</p>}
-      {!items.length && !pending && <p>Nenhum registro encontrado. Busque pelo título.</p>}
+      {!items.length && !pending && <p>{t("database.referencesEmpty")}</p>}
     </fieldset>
   );
 }

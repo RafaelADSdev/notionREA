@@ -1,6 +1,7 @@
 import { type Extensions, Mark, Node } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { z } from "zod";
+import { createTranslator, DEFAULT_LOCALE, type Translator } from "@/lib/i18n/core";
 import { contentToneSchema } from "../model/block-schema";
 import { isSafeContentLink } from "../model/content-schema";
 
@@ -8,7 +9,8 @@ export type MentionResolver = {
   resolve(id: string): { title: string; href: string } | null;
   subscribe(listener: () => void): () => void;
 };
-export type TextExtensionOptions = { mentionResolver?: MentionResolver };
+export type MentionLocale = { translate: () => Translator; subscribe: (listener: () => void) => () => void };
+export type TextExtensionOptions = { mentionResolver?: MentionResolver; locale?: MentionLocale };
 
 const TextDocument = Node.create({ name: "doc", topNode: true, content: "paragraph" });
 
@@ -91,7 +93,8 @@ function safeMentionHref(href: string): boolean {
   return /^\/(?!\/)[^\s\\]*$/.test(href) || isSafeContentLink(href);
 }
 
-function pageMention(resolver?: MentionResolver) {
+function pageMention(resolver?: MentionResolver, locale?: MentionLocale) {
+  const translate = () => locale?.translate() ?? createTranslator(DEFAULT_LOCALE);
   return Node.create({
     name: "pageMention",
     inline: true,
@@ -121,10 +124,10 @@ function pageMention(resolver?: MentionResolver) {
       ];
     },
     renderHTML({ node }) {
-      return ["span", { "data-page-mention": node.attrs.pageId }, "Referência de página"];
+      return ["span", { "data-page-mention": node.attrs.pageId }, translate()("editor.referencePage")];
     },
     renderText() {
-      return "Referência de página";
+      return translate()("editor.referencePage");
     },
     addNodeView() {
       return ({ node }) => {
@@ -137,14 +140,15 @@ function pageMention(resolver?: MentionResolver) {
           dom.replaceChildren();
           if (value && safeMentionHref(value.href)) {
             const link = document.createElement("a");
-            link.textContent = value.title;
+            link.textContent = value.title || translate()("pages.untitled");
             link.href = value.href;
             link.rel = "noopener noreferrer";
             dom.append(link);
-          } else dom.textContent = "Referência indisponível";
+          } else dom.textContent = translate()("editor.referenceUnavailable");
         };
         render();
         const unsubscribe = resolver?.subscribe(render);
+        const unsubscribeLocale = locale?.subscribe(render);
         return {
           dom,
           update(next) {
@@ -155,6 +159,7 @@ function pageMention(resolver?: MentionResolver) {
           },
           destroy() {
             unsubscribe?.();
+            unsubscribeLocale?.();
           },
         };
       };
@@ -184,6 +189,6 @@ export function createTextExtensions(options: TextExtensionOptions = {}): Extens
     }),
     SafeLink,
     SafeTextStyle,
-    pageMention(options.mentionResolver),
+    pageMention(options.mentionResolver, options.locale),
   ];
 }

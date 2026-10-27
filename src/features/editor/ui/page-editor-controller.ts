@@ -1,4 +1,5 @@
 "use client";
+
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import {
@@ -11,6 +12,7 @@ import { useCallback, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { encodeCursor, type SharedCursor } from "@/features/collaboration/protocol";
 import type { CommentAnchor } from "@/features/comments/model";
+import { useTranslations } from "@/lib/i18n/client";
 import type { EditorSession } from "../client/editor-session";
 import type { DocumentReferences } from "../client/reference-resolver";
 import { indentBlockSelection, orderedBlocks } from "../model/block-commands";
@@ -66,6 +68,8 @@ export function usePageEditorController(
   editable: boolean,
   publishCursor?: (cursor: SharedCursor | null) => void,
 ) {
+  const t = useTranslations();
+
   const registry = useRef(new Map<string, Editor>());
   const pending = useRef<Focus | null>(null);
   const selectedRef = useRef<string[]>([]);
@@ -109,13 +113,11 @@ export function usePageEditorController(
         });
         return result;
       } catch {
-        setError(
-          "Não foi possível concluir. Seu conteúdo foi preservado. Confira o destino e escolha preservar os filhos ao transformar um grupo.",
-        );
+        setError(t("editor.actionFailed"));
         return undefined;
       }
     },
-    [editable, session],
+    [editable, session, t],
   );
   const applyFocus = useCallback(
     (target: Focus, editor: Editor) => {
@@ -157,6 +159,9 @@ export function usePageEditorController(
     (id: string, position = 1, relative?: RelativeSelection) => {
       const target: Focus = { id, position, ...(relative ? { relative } : {}) };
       pending.current = target;
+      document.dispatchEvent(
+        new CustomEvent("bloco:reveal-block", { detail: { pageId: session.pageId, blockId: id } }),
+      );
       const mounted = registry.current.get(id);
       if (mounted && !mounted.isDestroyed) {
         applyFocus(target, mounted);
@@ -170,7 +175,7 @@ export function usePageEditorController(
         else document.querySelector<HTMLElement>(`[data-editor-block="${id}"]`)?.focus();
       });
     },
-    [applyFocus],
+    [applyFocus, session.pageId],
   );
   const preserveFocus = useCallback(
     (action: () => void, id = active?.id) => {
@@ -199,6 +204,9 @@ export function usePageEditorController(
       if (frame?.type === "tableRow")
         frame = frame.parentId ? session.page.getBlock(frame.parentId) : undefined;
       if (!frame) return;
+      document.dispatchEvent(
+        new CustomEvent("bloco:reveal-block", { detail: { pageId: session.pageId, blockId: frame.id } }),
+      );
       setMenu(null);
       setSelected([frame.id]);
       const element = document.querySelector<HTMLElement>(`[data-editor-block="${frame.id}"]`);

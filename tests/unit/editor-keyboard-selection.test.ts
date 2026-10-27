@@ -51,6 +51,7 @@ function loadedText(callbacks: Pick<BlockTextProps, "onLink"> = {}) {
   });
   if (!editor) throw new Error("Expected the mounted BlockText editor");
   const ready = editor;
+  ready.view.setProps({ handleScrollToSelection: () => true });
   ready.commands.setTextSelection(ready.state.doc.content.size - 1);
   ready.view.focus();
   const domText = ready.view.dom.querySelector("p")?.firstChild;
@@ -77,7 +78,7 @@ function loadedText(callbacks: Pick<BlockTextProps, "onLink"> = {}) {
         cancelable: true,
       }),
     );
-  return { document, editor: ready, key };
+  return { document, page, editor: ready, key };
 }
 describe("native selection followed immediately by a formatting shortcut", () => {
   it("bolds canonical selected text even when the ProseMirror state still holds the previous caret", () => {
@@ -95,5 +96,36 @@ describe("native selection followed immediately by a formatting shortcut", () =>
     });
     key("k");
     expect(selected).toEqual([{ from: 1, to: 14 }]);
+  });
+});
+
+describe("native text deletion", () => {
+  it("commits the browser deletion range before DOM reconciliation can restore it", () => {
+    const { document, page, editor } = loadedText();
+    page.undoManager.stopCapturing();
+    const node = editor.view.dom.querySelector("p")?.firstChild;
+    if (!(node instanceof Text)) throw new Error("Expected text");
+    const event = new InputEvent("beforeinput", {
+      inputType: "deleteContentBackward",
+      bubbles: true,
+      cancelable: true,
+    });
+    Object.defineProperty(event, "getTargetRanges", {
+      value: () => [
+        {
+          startContainer: node,
+          startOffset: 12,
+          endContainer: node,
+          endOffset: 13,
+        },
+      ],
+    });
+    editor.view.dom.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+    expect(validateContentDocument(document).text).toBe("Texto editad");
+    expect(page.undo()).toBe(true);
+    expect(validateContentDocument(document).text).toBe("Texto editado");
+    expect(page.redo()).toBe(true);
+    expect(validateContentDocument(document).text).toBe("Texto editad");
   });
 });

@@ -1,19 +1,24 @@
 import { z } from "zod";
+import { streamFile } from "@/features/files/stream";
 import { COVER_TYPES, fileDisposition } from "@/features/files/validation";
 import { withFileValidation } from "@/features/files/validation-slots";
 import { publicationToken } from "@/features/sharing/model";
+import { getTranslations } from "@/lib/i18n/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const unavailable = () =>
-  new Response("Arquivo indisponível.", {
+async function unavailable() {
+  const t = await getTranslations();
+  return new Response(t("files.unavailable"), {
     status: 404,
     headers: { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
   });
+}
 export const runtime = "nodejs";
 export async function GET(
   _request: Request,
   context: { params: Promise<{ token: string; fileId: string }> },
 ) {
+  const t = await getTranslations();
   const params = await context.params,
     token = publicationToken.safeParse(params.token),
     id = z.uuid().safeParse(params.fileId);
@@ -38,10 +43,9 @@ export async function GET(
       const current = await admin.rpc("verify_public_file", { p_token: token.data, p_file_id: id.data });
       if (current.error || current.data !== true) return unavailable();
       const inline = COVER_TYPES.some((type) => type === metadata.mime_type);
-      return new Response(downloaded.data, {
+      return new Response(streamFile(downloaded.data), {
         headers: {
           "Content-Type": inline ? file.data.mime_type : "application/octet-stream",
-          "Content-Length": String(downloaded.data.size),
           "Content-Disposition": fileDisposition(file.data.original_name, inline),
           "Cache-Control": "private, no-store, max-age=0",
           "X-Content-Type-Options": "nosniff",
@@ -50,7 +54,7 @@ export async function GET(
       });
     });
   } catch {
-    return new Response("Arquivo temporariamente indisponível.", {
+    return new Response(t("files.temporarilyUnavailable"), {
       status: 503,
       headers: { "Cache-Control": "private, no-store", "Retry-After": "5" },
     });

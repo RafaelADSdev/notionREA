@@ -1,5 +1,7 @@
 "use client";
+
 import { useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import { type DatabaseSort, type Filter, parseFilter, parseView } from "../model";
 import type { DatabaseData, DatabaseQuery, SavedDatabaseView } from "../types";
 import { FilterBuilder } from "./database-filter";
@@ -18,6 +20,8 @@ export function QueryPanel({
   onApply: (query: DatabaseQuery) => Promise<void>;
   run: RunCommand;
 }) {
+  const t = useTranslations();
+
   const [filter, setFilter] = useState<Filter | null>(
     current.filter === undefined ? view.filter : current.filter,
   );
@@ -74,24 +78,22 @@ export function QueryPanel({
       }
       await onApply({ filter: parsedFilter, sorts, groupBy: next.groupBy, cursor: null });
     } catch {
-      setError(
-        "A consulta não foi aplicada. Confira as condições, propriedades e o agrupamento; nenhuma condição inválida será ignorada.",
-      );
+      setError(t("database.queryInvalid"));
     } finally {
       setPending(false);
     }
   };
   return (
     <details className="db-panel">
-      <summary>Filtrar, ordenar e agrupar</summary>
-      <p>Os filtros são temporários até você salvar a configuração da visualização.</p>
+      <summary>{t("database.queryPanel")}</summary>
+      <p>{t("database.temporaryFilters")}</p>
       <FilterBuilder data={data} value={filter} onChange={setFilter} />
       <fieldset className="db-sorts">
-        <legend>Ordenações, em ordem de prioridade</legend>
+        <legend>{t("database.sortPriority")}</legend>
         {sorts.map((sort, index) => (
           <div key={sort.propertyId} className="db-sort-row">
             <select
-              aria-label={`Propriedade da ordenação ${index + 1}`}
+              aria-label={t("database.sortPropertyNumber", { number: index + 1 })}
               value={sort.propertyId}
               onChange={(event) =>
                 setSorts(
@@ -112,7 +114,7 @@ export function QueryPanel({
               ))}
             </select>
             <select
-              aria-label={`Direção da ordenação ${index + 1}`}
+              aria-label={t("database.sortDirectionNumber", { number: index + 1 })}
               value={sort.direction}
               onChange={(event) =>
                 setSorts(
@@ -124,13 +126,13 @@ export function QueryPanel({
                 )
               }
             >
-              <option value="asc">Crescente</option>
-              <option value="desc">Decrescente</option>
+              <option value="asc">{t("database.ascending")}</option>
+              <option value="desc">{t("database.descending")}</option>
             </select>
             <button
               type="button"
               disabled={index === 0}
-              aria-label={`Priorizar ordenação ${index + 1}`}
+              aria-label={t("database.prioritizeSortNumber", { number: index + 1 })}
               onClick={() => {
                 const next = [...sorts];
                 const previous = next[index - 1];
@@ -144,7 +146,7 @@ export function QueryPanel({
               ↑
             </button>
             <button type="button" onClick={() => setSorts(sorts.filter((_, at) => at !== index))}>
-              Remover ordenação
+              {t("database.removeSort")}
             </button>
           </div>
         ))}
@@ -158,14 +160,14 @@ export function QueryPanel({
             if (property) setSorts([...sorts, { propertyId: property.id, direction: "asc" }]);
           }}
         >
-          Adicionar ordenação
+          {t("database.addSort")}
         </button>
       </fieldset>
       {view.type !== "calendar" && (
         <label>
-          Agrupar por
+          {t("database.groupBy")}
           <select value={groupBy ?? ""} onChange={(event) => setGroupBy(event.target.value || null)}>
-            <option value="">Sem agrupamento</option>
+            <option value="">{t("database.noGrouping")}</option>
             {groups.map((property) => (
               <option key={property.id} value={property.id}>
                 {property.name}
@@ -176,11 +178,11 @@ export function QueryPanel({
       )}
       <div className="db-actions">
         <button type="button" disabled={pending} onClick={() => void apply(false)}>
-          Aplicar nesta sessão
+          {t("database.applySession")}
         </button>
         {data.editable && (
           <button type="button" disabled={pending} onClick={() => void apply(true)}>
-            Salvar nesta visualização
+            {t("database.saveViewQuery")}
           </button>
         )}
         <button
@@ -195,10 +197,10 @@ export function QueryPanel({
               sorts: view.sorts,
               groupBy: view.groupBy,
               cursor: null,
-            }).catch(() => setError("Não foi possível restaurar a consulta."));
+            }).catch(() => setError(t("database.restoreQueryFailed")));
           }}
         >
-          Restaurar configuração salva
+          {t("database.restoreSavedQuery")}
         </button>
       </div>
       {error && <p role="alert">{error}</p>}

@@ -1,32 +1,36 @@
 "use client";
+import { Accessibility, defaultPreset } from "@dnd-kit/dom";
+import { DragDropProvider, type DragEndEvent, useDroppable } from "@dnd-kit/react";
+import { isSortable, useSortable } from "@dnd-kit/react/sortable";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
-import { DragDropProvider, useDroppable, type DragEndEvent } from "@dnd-kit/react";
-import { useSortable, isSortable } from "@dnd-kit/react/sortable";
-import { Accessibility, defaultPreset } from "@dnd-kit/dom";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icon";
+import { useTranslations } from "@/lib/i18n/client";
+import type { Translator } from "@/lib/i18n/core";
 import { movePage } from "./actions";
 import { reorderIntent } from "./model/order";
 import type { PageActionState, PageSummary } from "./model/validation";
 
-const plugins = [
-  ...defaultPreset.plugins.filter((plugin) => plugin !== Accessibility),
-  {
-    plugin: Accessibility,
-    options: {
-      screenReaderInstructions: {
-        draggable: "Para mover, pressione Espaço. Use as setas; Espaço confirma e Escape cancela.",
-      },
-      announcements: {
-        dragstart: () => "Página selecionada para mover.",
-        dragover: () => "Posição de destino atualizada.",
-        dragend: (event: DragEndEvent) =>
-          event.canceled ? "Movimento cancelado." : "Página solta. Salvando a ordem.",
+function plugins(t: Translator) {
+  return [
+    ...defaultPreset.plugins.filter((plugin) => plugin !== Accessibility),
+    {
+      plugin: Accessibility,
+      options: {
+        screenReaderInstructions: {
+          draggable: t("pages.dragInstructions"),
+        },
+        announcements: {
+          dragstart: () => t("pages.dragSelected"),
+          dragover: () => t("pages.dragPosition"),
+          dragend: (event: DragEndEvent) =>
+            event.canceled ? t("common.moveCancelled") : t("pages.dragDropped"),
+        },
       },
     },
-  },
-];
+  ];
+}
 
 function PageRow({
   page,
@@ -43,6 +47,8 @@ function PageRow({
   index: number;
   draggingId: string;
 }) {
+  const t = useTranslations();
+
   const { ref, handleRef } = useSortable({ id: page.id, index, disabled: disabled || !sortable });
   const { ref: folderRef, isDropTarget } = useDroppable({
     id: `inside:${page.id}`,
@@ -56,26 +62,26 @@ function PageRow({
           type="button"
           className="icon-button drag-handle"
           disabled={disabled}
-          aria-label={`Mover ${page.title || "Página sem título"}`}
+          aria-label={t("pages.moveNamed", { name: page.title || t("pages.untitled") })}
         >
           <Icon name="drag" />
         </button>
       )}
       <Link className="page-link" href={`/w/${workspaceId}/p/${page.id}`}>
         <span aria-hidden="true">{page.icon || <Icon name="document" />}</span>
-        <span>{page.title || "Página sem título"}</span>
+        <span>{page.title || t("pages.untitled")}</span>
         <Icon name="arrow" />
       </Link>
       {sortable && (
         <span
           ref={folderRef}
           className="folder-drop"
-          title={`Colocar dentro de ${page.title || "Página sem título"}`}
+          title={t("pages.putInsideNamed", { name: page.title || t("pages.untitled") })}
           aria-hidden={!draggingId}
           data-drop-target={isDropTarget}
         >
           <Icon name="document" size={16} />
-          Dentro
+          {t("pages.inside")}
         </span>
       )}
     </li>
@@ -91,7 +97,10 @@ export function PageList({
   workspaceId: string;
   canReorder?: boolean;
 }) {
+  const t = useTranslations();
+
   const router = useRouter();
+  const localizedPlugins = useMemo(() => plugins(t), [t]);
   const [pending, startTransition] = useTransition();
   const [notice, setNotice] = useState("");
   const [draggingId, setDraggingId] = useState("");
@@ -132,15 +141,14 @@ export function PageList({
         confirmationDialog.current?.showModal();
         return;
       }
-      setNotice(result.error ?? result.message ?? "Recarregue a lista para revisar o movimento.");
+      setNotice(result.error ?? result.message ?? t("pages.reloadMove"));
       router.refresh();
     });
   }
   return (
     <>
       <p className="sr-only" id={`order-help-${workspaceId}`}>
-        Para reordenar, foque o controle de movimento, pressione Espaço, use as setas e confirme com Espaço.
-        Escape cancela.
+        {t("pages.reorderInstructions")}
       </p>
       <DragDropProvider
         onDragStart={(event) => {
@@ -151,11 +159,11 @@ export function PageList({
           setDraggingId("");
           finish(event);
         }}
-        plugins={plugins}
+        plugins={localizedPlugins}
       >
         <ul
           className="page-list"
-          aria-label="Páginas"
+          aria-label={t("navigation.pages")}
           aria-describedby={sortable ? `order-help-${workspaceId}` : undefined}
           data-dragging={Boolean(draggingId)}
         >
@@ -172,7 +180,7 @@ export function PageList({
           ))}
         </ul>
       </DragDropProvider>
-      {!pages.length && <p className="notice">Ainda não há páginas aqui. Crie a primeira para começar.</p>}
+      {!pages.length && <p className="notice">{t("pages.empty")}</p>}
       {notice && (
         <p role="status" className="notice">
           {notice}
@@ -181,12 +189,12 @@ export function PageList({
       <dialog
         ref={confirmationDialog}
         className="command-dialog move-confirmation"
-        aria-label="Confirmar mudança de acesso"
+        aria-label={t("pages.confirmAccessChange")}
         onCancel={() => setConfirmation(null)}
       >
-        <h2>Revisar movimento</h2>
+        <h2>{t("pages.reviewMove")}</h2>
         <p>
-          {confirmation?.state.message} Páginas afetadas: {confirmation?.state.affectedPages}.
+          {confirmation?.state.message} {t("pages.affectedPages")} {confirmation?.state.affectedPages}.
         </p>
         <form
           onSubmit={(event) => {
@@ -201,7 +209,7 @@ export function PageList({
                 setConfirmation({ form: confirmation.form, state: result });
                 return;
               }
-              setNotice(result.error ?? result.message ?? "Recarregue para revisar a página.");
+              setNotice(result.error ?? result.message ?? t("pages.reloadReview"));
               confirmationDialog.current?.close();
               setConfirmation(null);
               router.refresh();
@@ -210,7 +218,7 @@ export function PageList({
         >
           <label className="checkbox-field">
             <input type="checkbox" name="confirmAccess" required />
-            Confirmo a mudança de acesso
+            {t("pages.confirmAccess")}
           </label>
           <div className="form-links">
             <button
@@ -221,10 +229,10 @@ export function PageList({
                 setConfirmation(null);
               }}
             >
-              Cancelar
+              {t("common.cancel")}
             </button>
             <button type="submit" className="button" disabled={pending}>
-              Confirmar movimento
+              {t("pages.confirmMove")}
             </button>
           </div>
         </form>

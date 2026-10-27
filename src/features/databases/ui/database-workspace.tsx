@@ -1,5 +1,7 @@
 "use client";
+
 import { useId, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import type {
   DatabaseCommand,
   DatabaseCommandResult,
@@ -20,7 +22,7 @@ import { QueryPanel } from "./database-query-panel";
 import { TemplatePanel } from "./database-templates";
 import { ViewDialog } from "./database-view-dialog";
 import { DatabaseViews } from "./database-views";
-import { PROPERTY_LABELS, VIEW_LABELS } from "./value-utils";
+import { propertyLabels, viewLabels } from "./value-utils";
 
 export type DatabaseWorkspaceProps = {
   data: DatabaseData;
@@ -31,8 +33,10 @@ export type DatabaseWorkspaceProps = {
   onFindPeople?: FindDatabasePeople;
 };
 export function DatabaseWorkspace(props: DatabaseWorkspaceProps) {
+  const t = useTranslations();
+
   const view = props.data.views.find((item) => item.id === props.data.viewId) ?? props.data.views[0];
-  if (!view) return <p role="alert">Nenhuma visualização disponível. Atualize a página.</p>;
+  if (!view) return <p role="alert">{t("database.noViews")}</p>;
   return (
     <ReferenceSearchContext value={props.onFindReferences}>
       <PeopleSearchContext value={props.onFindPeople}>
@@ -48,6 +52,10 @@ function Workspace({
   onCommand,
   onOpenRow,
 }: DatabaseWorkspaceProps & { view: SavedDatabaseView }) {
+  const t = useTranslations();
+  const PROPERTY_LABELS = propertyLabels(t);
+  const VIEW_LABELS = viewLabels(t);
+
   const today = new Date();
   const [month, setMonth] = useState(
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`,
@@ -81,7 +89,7 @@ function Workspace({
       await onQuery(next);
       setQuery(next);
     } catch {
-      setError("Não foi possível atualizar a consulta. Os dados exibidos foram mantidos.");
+      setError(t("database.queryFailed"));
       throw new Error("Database query failed");
     } finally {
       setPending((count) => count - 1);
@@ -104,18 +112,14 @@ function Workspace({
               : undefined;
         try {
           await onQuery(target ? { viewId: target, cursor: null } : { ...query, cursor: null });
-          setNotice("Alterações salvas.");
+          setNotice(t("database.saved"));
         } catch {
-          setError(
-            "A alteração foi salva, mas não foi possível atualizar a consulta. Atualize os dados; não é necessário repetir a alteração.",
-          );
+          setError(t("database.savedRefreshFailed"));
         }
       }
       return result;
     } catch {
-      setError(
-        "Não foi possível concluir a alteração. Verifique a conexão e atualize os dados antes de tentar novamente.",
-      );
+      setError(t("database.changeFailed"));
       return { ok: false };
     } finally {
       setPending((count) => count - 1);
@@ -126,28 +130,32 @@ function Workspace({
     setError("");
     const target = data.views.find((item) => item.id === id);
     void onQuery({ viewId: id, cursor: null, ...(target?.type === "calendar" ? { month } : {}) })
-      .catch(() => setError("Não foi possível abrir esta visualização."))
+      .catch(() => setError(t("database.openViewFailed")))
       .finally(() => setPending((count) => count - 1));
   };
   return (
-    <section className="db-workspace" aria-label={data.title || "Base de dados"} aria-busy={pending > 0}>
+    <section
+      className="db-workspace"
+      aria-label={data.title || t("database.database")}
+      aria-busy={pending > 0}
+    >
       <header className="db-header">
         <div>
-          <p className="db-eyebrow">Base de dados</p>
-          <h2>{data.title || "Base sem título"}</h2>
+          <p className="db-eyebrow">{t("database.database")}</p>
+          <h2>{data.title || t("database.untitledDatabase")}</h2>
         </div>
         {data.editable ? (
           <button type="button" onClick={() => setCreating(true)}>
-            Novo registro
+            {t("database.newRecord")}
           </button>
         ) : (
-          <span className="db-readonly">Somente leitura</span>
+          <span className="db-readonly">{t("common.readonly")}</span>
         )}
       </header>
       <div
         className="db-view-tabs"
         role="tablist"
-        aria-label="Visualizações da base"
+        aria-label={t("database.views")}
         onKeyDown={(event) => {
           if (
             event.altKey ||
@@ -190,25 +198,25 @@ function Workspace({
         {data.editable && (
           <>
             <button type="button" onClick={() => setViewEditor({ value: null, duplicate: false })}>
-              Nova visualização
+              {t("database.newView")}
             </button>
             <button type="button" onClick={() => setViewEditor({ value: view, duplicate: false })}>
-              Configurar visualização
+              {t("database.configureView")}
             </button>
             <button type="button" onClick={() => setViewEditor({ value: view, duplicate: true })}>
-              Duplicar visualização
+              {t("database.duplicateView")}
             </button>
             <button type="button" disabled={data.views.length <= 1} onClick={() => setDeleteView(true)}>
-              Excluir visualização
+              {t("database.deleteView")}
             </button>
           </>
         )}
         <button type="button" disabled={pending > 0} onClick={() => void refresh().catch(() => undefined)}>
-          Atualizar dados
+          {t("common.refreshData")}
         </button>
         {view.type === "calendar" && (
           <label>
-            Mês
+            {t("database.month")}
             <input
               type="month"
               required
@@ -252,14 +260,14 @@ function Workspace({
             disabled={pending > 0}
             onClick={() => void apply({ cursor: data.nextCursor }).catch(() => undefined)}
           >
-            Carregar mais registros
+            {t("database.loadRecords")}
           </button>
         )}
       </div>
       {data.editable && (
         <>
           <details className="db-panel">
-            <summary>Propriedades da base</summary>
+            <summary>{t("database.properties")}</summary>
             <ul className="db-property-list">
               {data.properties.map((item) => (
                 <li key={item.id}>
@@ -267,13 +275,13 @@ function Workspace({
                     {item.name} <small>{PROPERTY_LABELS[item.type]}</small>
                   </span>
                   <button type="button" onClick={() => setProperty({ value: item })}>
-                    Editar {item.name}
+                    {t("common.edit")} {item.name}
                   </button>
                 </li>
               ))}
             </ul>
             <button type="button" onClick={() => setProperty({ value: null })}>
-              Nova propriedade
+              {t("database.newProperty")}
             </button>
           </details>
           <TemplatePanel data={data} run={run} onOpen={onOpenRow} />
@@ -292,8 +300,8 @@ function Workspace({
         />
       )}
       {deleteView && (
-        <DatabaseDialog title="Excluir visualização?" onClose={() => setDeleteView(false)}>
-          <p>Os registros e seus conteúdos serão mantidos. A última visualização não pode ser excluída.</p>
+        <DatabaseDialog title={t("database.deleteViewQuestion")} onClose={() => setDeleteView(false)}>
+          <p>{t("database.deleteViewNotice")}</p>
           <div className="db-actions">
             <button
               type="button"
@@ -302,21 +310,21 @@ function Workspace({
                 void run({ action: "deleteView", id: view.id, expectedRevision: view.revision }).then(
                   (result) => {
                     if (result.ok) setDeleteView(false);
-                    else setError("Não foi possível excluir a visualização.");
+                    else setError(t("database.deleteViewFailed"));
                   },
                 );
               }}
             >
-              Excluir visualização
+              {t("database.deleteView")}
             </button>
             <button type="button" onClick={() => setDeleteView(false)}>
-              Cancelar
+              {t("common.cancel")}
             </button>
           </div>
         </DatabaseDialog>
       )}
       {creating && (
-        <DatabaseDialog title="Novo registro" onClose={() => setCreating(false)}>
+        <DatabaseDialog title={t("database.newRecord")} onClose={() => setCreating(false)}>
           <form
             className="db-form"
             onSubmit={(event) => {
@@ -327,19 +335,19 @@ function Workspace({
                     setCreating(false);
                     setTitle("");
                     if (result.pageId ?? result.id) onOpenRow(result.pageId ?? result.id ?? "");
-                  } else setError("Não foi possível criar o registro.");
+                  } else setError(t("database.createRecordFailed"));
                 },
               );
             }}
           >
             <label>
-              Título do registro
+              {t("database.recordTitle")}
               <input maxLength={500} value={title} onChange={(event) => setTitle(event.target.value)} />
             </label>
             <label>
-              Template
+              {t("database.template")}
               <select value={templateId} onChange={(event) => setTemplateId(event.target.value)}>
-                <option value="">Página em branco</option>
+                <option value="">{t("database.blankPage")}</option>
                 {data.templates.map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.title}
@@ -347,18 +355,13 @@ function Workspace({
                 ))}
               </select>
             </label>
-            {templateId && (
-              <p>
-                O corpo e os valores padrão do template serão copiados para um novo registro. Destinos de
-                relações serão verificados novamente.
-              </p>
-            )}
+            {templateId && <p>{t("database.createFromTemplateNotice")}</p>}
             <div className="db-actions">
               <button type="submit" disabled={pending > 0}>
-                Criar registro
+                {t("database.createRecord")}
               </button>
               <button type="button" onClick={() => setCreating(false)}>
-                Cancelar
+                {t("common.cancel")}
               </button>
             </div>
           </form>

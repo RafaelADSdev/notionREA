@@ -1,5 +1,7 @@
 "use client";
+
 import { useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   type DatabaseOption,
   optionColors,
@@ -10,7 +12,7 @@ import {
 import type { DatabaseCommand, DatabaseCommandResult, DatabaseData, DatabaseProperty } from "../types";
 import { DatabaseDialog } from "./database-dialog";
 import type { RunCommand } from "./database-value";
-import { PROPERTY_LABELS } from "./value-utils";
+import { propertyLabels } from "./value-utils";
 
 export function PropertyDialog({
   data,
@@ -23,6 +25,9 @@ export function PropertyDialog({
   run: RunCommand;
   onClose: () => void;
 }) {
+  const t = useTranslations();
+  const PROPERTY_LABELS = propertyLabels(t);
+
   const [name, setName] = useState(property?.name ?? "");
   const [type, setType] = useState<PropertyDefinition["type"]>(property?.type ?? "text");
   const [options, setOptions] = useState<DatabaseOption[]>(
@@ -49,9 +54,9 @@ export function PropertyDialog({
         setPreview({ command, result });
         setConfirmed(false);
       } else if (result.ok) onClose();
-      else setError("Não foi possível alterar a propriedade. Atualize os dados e tente novamente.");
+      else setError(t("database.changePropertyFailed"));
     } catch {
-      setError("Não foi possível alterar a propriedade. Tente novamente.");
+      setError(t("database.changePropertyRetry"));
     } finally {
       setPending(false);
     }
@@ -81,7 +86,7 @@ export function PropertyDialog({
         expectedRevision: property?.revision ?? 0,
       });
     } catch {
-      setError("Confira o nome, as opções e a configuração da propriedade.");
+      setError(t("database.checkProperty"));
     }
   };
   const reorder = (index: number, direction: number) => {
@@ -95,28 +100,30 @@ export function PropertyDialog({
     }
   };
   return (
-    <DatabaseDialog title={property ? "Editar propriedade" : "Nova propriedade"} onClose={onClose}>
+    <DatabaseDialog
+      title={property ? t("database.editProperty") : t("database.newProperty")}
+      onClose={onClose}
+    >
       {preview ? (
         <div className="db-property-preview">
-          <h3>Confirmar alteração</h3>
+          <h3>{t("database.confirmChange")}</h3>
           <p>
-            {preview.result.valueCount ?? 0} valores serão considerados;{" "}
-            {preview.result.incompatibleCount ?? 0} valores incompatíveis poderão ser limpos.
+            {preview.result.valueCount ?? 0} {t("database.valuesConsidered")}{" "}
+            {preview.result.incompatibleCount ?? 0} {t("database.valuesCleared")}
           </p>
           {!!preview.result.dependentViews?.length && (
-            <p>Visualizações dependentes: {preview.result.dependentViews.join(", ")}.</p>
+            <p>
+              {t("database.dependentViews")} {preview.result.dependentViews.join(", ")}.
+            </p>
           )}
-          <p>
-            A alteração afeta o schema compartilhado e os valores padrão de templates. Confira a prévia antes
-            de confirmar.
-          </p>
+          <p>{t("database.changeSchemaNotice")}</p>
           <label>
             <input
               type="checkbox"
               checked={confirmed}
               onChange={(event) => setConfirmed(event.target.checked)}
             />
-            Entendo o alcance da alteração e autorizo tratar os valores incompatíveis.
+            {t("database.confirmScope")}
           </label>
           <div className="db-actions">
             <button
@@ -130,10 +137,10 @@ export function PropertyDialog({
                 } as DatabaseCommand)
               }
             >
-              Confirmar alteração
+              {t("database.confirmChange")}
             </button>
             <button type="button" disabled={pending} onClick={() => setPreview(null)}>
-              Voltar
+              {t("common.back")}
             </button>
           </div>
         </div>
@@ -146,11 +153,11 @@ export function PropertyDialog({
           }}
         >
           <label>
-            Nome da propriedade
+            {t("database.propertyName")}
             <input required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} />
           </label>
           <label>
-            Tipo
+            {t("common.type")}
             <select
               value={type}
               disabled={property?.type === "title"}
@@ -167,11 +174,11 @@ export function PropertyDialog({
           </label>
           {(type === "select" || type === "multiSelect") && (
             <fieldset className="db-property-options">
-              <legend>Opções</legend>
+              <legend>{t("database.options")}</legend>
               {options.map((option, index) => (
                 <div key={option.id} className="db-option" data-color={option.color}>
                   <input
-                    aria-label={`Nome da opção ${index + 1}`}
+                    aria-label={t("database.optionNameNumber", { number: index + 1 })}
                     required
                     maxLength={120}
                     value={option.label}
@@ -184,7 +191,7 @@ export function PropertyDialog({
                     }
                   />
                   <select
-                    aria-label={`Cor da opção ${index + 1}`}
+                    aria-label={t("database.optionColorNumber", { number: index + 1 })}
                     value={option.color}
                     onChange={(event) =>
                       setOptions(
@@ -200,12 +207,12 @@ export function PropertyDialog({
                       <option key={color} value={color}>
                         {
                           {
-                            default: "Padrão",
-                            indigo: "Índigo",
-                            copper: "Cobre",
-                            green: "Verde",
-                            red: "Vermelho",
-                            yellow: "Amarelo",
+                            default: t("colors.default"),
+                            indigo: t("colors.indigo"),
+                            copper: t("colors.copper"),
+                            green: t("colors.green"),
+                            red: t("colors.red"),
+                            yellow: t("colors.yellow"),
                           }[color]
                         }
                       </option>
@@ -215,7 +222,7 @@ export function PropertyDialog({
                     type="button"
                     disabled={index === 0}
                     onClick={() => reorder(index, -1)}
-                    aria-label={`Subir opção ${index + 1}`}
+                    aria-label={t("database.moveOptionUp", { number: index + 1 })}
                   >
                     ↑
                   </button>
@@ -223,7 +230,7 @@ export function PropertyDialog({
                     type="button"
                     disabled={index === options.length - 1}
                     onClick={() => reorder(index, 1)}
-                    aria-label={`Descer opção ${index + 1}`}
+                    aria-label={t("database.moveOptionDown", { number: index + 1 })}
                   >
                     ↓
                   </button>
@@ -231,7 +238,7 @@ export function PropertyDialog({
                     type="button"
                     onClick={() => setOptions(options.filter((item) => item.id !== option.id))}
                   >
-                    Remover opção
+                    {t("database.removeOption")}
                   </button>
                 </div>
               ))}
@@ -239,30 +246,33 @@ export function PropertyDialog({
                 type="button"
                 disabled={options.length >= 500}
                 onClick={() =>
-                  setOptions([...options, { id: crypto.randomUUID(), label: "Nova opção", color: "default" }])
+                  setOptions([
+                    ...options,
+                    { id: crypto.randomUUID(), label: t("database.newOption"), color: "default" },
+                  ])
                 }
               >
-                Adicionar opção
+                {t("database.addOption")}
               </button>
             </fieldset>
           )}
           {type === "date" && (
             <label>
-              Semântica da data
+              {t("database.dateSemantics")}
               <select
                 value={mode}
                 onChange={(event) => setMode(event.target.value === "instant" ? "instant" : "civil")}
               >
-                <option value="civil">Dia civil (sem hora)</option>
-                <option value="instant">Data e hora com fuso</option>
+                <option value="civil">{t("database.civilDate")}</option>
+                <option value="instant">{t("database.dateTimeZone")}</option>
               </select>
             </label>
           )}
           {type === "relation" && (
             <label>
-              Base de destino
+              {t("database.targetDatabase")}
               <select required value={target} onChange={(event) => setTarget(event.target.value)}>
-                <option value="">Escolha uma base autorizada</option>
+                <option value="">{t("database.chooseDatabase")}</option>
                 {data.databases.map((database) => (
                   <option key={database.id} value={database.id}>
                     {database.label}
@@ -273,10 +283,10 @@ export function PropertyDialog({
           )}
           <div className="db-actions">
             <button disabled={pending} type="submit">
-              {pending ? "Verificando…" : "Salvar propriedade"}
+              {pending ? "Verificando…" : t("database.saveProperty")}
             </button>
             <button type="button" disabled={pending} onClick={onClose}>
-              Cancelar
+              {t("common.cancel")}
             </button>
             {property && property.type !== "title" && (
               <button
@@ -290,7 +300,7 @@ export function PropertyDialog({
                   })
                 }
               >
-                Remover propriedade
+                {t("database.removeProperty")}
               </button>
             )}
           </div>

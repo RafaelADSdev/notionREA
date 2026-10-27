@@ -59,7 +59,7 @@ export class DocumentReferences {
       resolve: (id) => {
         const value = this.mentionValues.get(id.toLowerCase());
         return value
-          ? { title: value.title || "Página sem título", href: `/w/${this.workspaceId}/p/${value.id}` }
+          ? { title: value.title, href: `/w/${this.workspaceId}/p/${value.id}` }
           : null;
       },
       subscribe: (listener) => this.subscribe(this.mentionListeners, listener),

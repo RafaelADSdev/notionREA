@@ -52,9 +52,13 @@ export const publicInline = z.discriminatedUnion("type", [
     marks: z.array(publicMark).max(7).optional(),
   }),
   z.strictObject({ type: z.literal("hardBreak") }),
+  z.strictObject({ type: z.literal("unavailable") }),
   z.strictObject({
     type: z.literal("pageMention"),
-    attrs: z.strictObject({ pageId: z.uuid(), title: z.string().max(500), token: publicationToken }),
+    attrs: z.union([
+      z.strictObject({ pageId: z.uuid(), title: z.string().max(500), token: publicationToken }),
+      z.strictObject({ pageId: z.uuid() }),
+    ]),
   }),
 ]);
 export type PublicInline = z.infer<typeof publicInline>;
@@ -87,6 +91,31 @@ export const publicProperty = z.strictObject({
     .max(500)
     .optional(),
 });
+export const PUBLIC_CONTENT_CHUNK_BYTES = 262144;
+export const MAX_PUBLIC_CONTENT_BYTES = 50331648;
+export const publicContentManifest = z
+  .strictObject({
+    hash: publicationToken,
+    byteLength: z.number().int().min(1).max(MAX_PUBLIC_CONTENT_BYTES),
+    chunks: z.number().int().min(1).max(192),
+  })
+  .refine((value) => value.chunks === Math.ceil(value.byteLength / PUBLIC_CONTENT_CHUNK_BYTES));
+export type PublicContentManifest = z.infer<typeof publicContentManifest>;
+export const publicContentSchema = z.strictObject({
+  schemaVersion: z.literal(1),
+  blocks: z.array(publicBlock).max(10000),
+  references: z.array(publicReference).max(10000).optional(),
+});
+export type PublicContent = z.infer<typeof publicContentSchema>;
+export const publicChunkSchema = z.strictObject({
+  hash: publicationToken,
+  index: z.number().int().min(0).max(191),
+  byteLength: z.number().int().min(1).max(MAX_PUBLIC_CONTENT_BYTES),
+  data: z
+    .string()
+    .max(349528)
+    .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),
+});
 export const publicPageSchema = z.strictObject({
   page: z.strictObject({
     id: z.uuid(),
@@ -94,7 +123,14 @@ export const publicPageSchema = z.strictObject({
     icon: z.string().max(16),
     coverFileId: z.uuid().nullable(),
   }),
-  content: z.strictObject({ schemaVersion: z.literal(1), blocks: z.array(publicBlock).max(10000) }),
+  content: z
+    .strictObject({
+      schemaVersion: z.literal(1),
+      blocks: z.array(publicBlock).max(10000),
+      references: z.array(publicReference).max(10000).optional(),
+      chunked: publicContentManifest.optional(),
+    })
+    .refine((value) => !value.chunked || (value.blocks.length === 0 && value.references === undefined)),
   database: z
     .strictObject({
       id: z.uuid(),

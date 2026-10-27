@@ -1,9 +1,11 @@
 "use client";
+
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/icon";
-import { pageListSchema, type PageList, type PageSummary } from "./model/validation";
+import { useTranslations } from "@/lib/i18n/client";
+import { type PageList, type PageSummary, pageListSchema } from "./model/validation";
 
 type TreeRow = { page: PageSummary; depth: number };
 export function PageTree({
@@ -13,6 +15,8 @@ export function PageTree({
   workspaceId: string;
   onNavigate?: (path: string) => void;
 }) {
+  const t = useTranslations();
+
   const pathname = usePathname();
   const [groups, setGroups] = useState<Record<string, PageList>>({});
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -41,7 +45,7 @@ export function PageTree({
       }));
       setError("");
     } catch {
-      setError("Não foi possível carregar a árvore. Tente novamente.");
+      setError(t("pages.treeFailed"));
     } finally {
       setBusy("");
     }
@@ -62,10 +66,10 @@ export function PageTree({
           );
       })
       .catch(() => {
-        if (!controller.signal.aborted) setError("Não foi possível carregar as páginas.");
+        if (!controller.signal.aborted) setError(t("pages.loadFailed"));
       });
     return () => controller.abort();
-  }, [workspaceId, pathname]);
+  }, [workspaceId, pathname, t]);
   // Flatten iteratively: deeply nested pages never recurse through React components.
   const rows: TreeRow[] = [];
   const stack: TreeRow[] = [...(groups[root]?.items ?? [])].reverse().map((page) => ({ page, depth: 0 }));
@@ -80,7 +84,7 @@ export function PageTree({
         stack.push({ page, depth: row.depth + 1 });
   }
   return (
-    <nav aria-label="Árvore de páginas" className="page-tree">
+    <nav aria-label={t("pages.tree")} className="page-tree">
       <ul>
         {rows.map(({ page, depth }) => (
           <li key={page.id} style={{ paddingInlineStart: Math.min(depth, 12) * 10 }}>
@@ -89,7 +93,9 @@ export function PageTree({
                 type="button"
                 className="tree-expand"
                 aria-expanded={expanded.has(page.id)}
-                aria-label={`${expanded.has(page.id) ? "Recolher" : "Expandir"} ${page.title || "Página sem título"}`}
+                aria-label={t(expanded.has(page.id) ? "pages.collapseNamed" : "pages.expandNamed", {
+                  name: page.title || t("pages.untitled"),
+                })}
                 disabled={busy === page.id}
                 onClick={() => {
                   setExpanded((current) => {
@@ -109,7 +115,7 @@ export function PageTree({
                 aria-current={pathname.endsWith(`/p/${page.id}`) ? "page" : undefined}
               >
                 <span aria-hidden="true">{page.icon || <Icon name="document" size={16} />}</span>
-                <span>{page.title || "Página sem título"}</span>
+                <span>{page.title || t("pages.untitled")}</span>
               </Link>
             </div>
             {expanded.has(page.id) && groups[page.id]?.more && (
@@ -119,7 +125,7 @@ export function PageTree({
                 disabled={busy !== ""}
                 onClick={() => void load(page.id, true)}
               >
-                Mais subpáginas de {page.title || "página sem título"}
+                {t("pages.moreSubpagesOf")} {page.title || t("pages.untitledLowercase")}
               </button>
             )}
           </li>
@@ -132,14 +138,14 @@ export function PageTree({
           disabled={busy !== ""}
           onClick={() => void load(root, true)}
         >
-          Mais páginas
+          {t("pages.morePages")}
         </button>
       )}
       {error && (
         <p role="alert" className="notice">
           {error}{" "}
           <button type="button" onClick={() => void load(root)}>
-            Recarregar
+            {t("common.reload")}
           </button>
         </p>
       )}

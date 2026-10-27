@@ -78,7 +78,7 @@ select ok(public.verify_public_file(current_setting('sharing.source'),'e4000000-
 select ok(not public.verify_public_file(current_setting('sharing.source'),'e4000000-0000-4000-8000-000000000002'),'ready but unreferenced file remains private');
 set local role authenticated;
 select set_config('sharing.target',public.configure_page_publication('e3000000-0000-4000-8000-000000000005',0,true)->'publication'->>'token',true);
-select is(public.read_page_publication(current_setting('sharing.source'))->'content'->'blocks'->0->'content'->'content'->0->'content'->1->'attrs'->>'title','Private mention target','published mention resolves its current title');
+select is(public.read_page_publication(current_setting('sharing.source'))#>>'{content,references,0,title}','Private mention target','published mention resolves its current title through the authorized dictionary');
 select public.configure_page_publication('e3000000-0000-4000-8000-000000000005',1,false);
 select ok(public.read_page_publication(current_setting('sharing.source'))::text not like '%Private mention target%','revoking target removes a formerly resolved label on the next source read');
 select set_config('sharing.base',public.create_database('e2000000-0000-4000-8000-000000000001',null,'Public base','e5000000-0000-4000-8000-000000000001')::text,true);
@@ -129,9 +129,9 @@ select public.configure_page_publication('e3000000-0000-4000-8000-000000000001',
 select ok(public.read_page_publication(current_setting('sharing.source')) is null,'rotating the public link immediately invalidates the previous token');
 select set_config('sharing.source',public.get_page_sharing('e3000000-0000-4000-8000-000000000001')->'publication'->>'token',true);
 reset role;
-update public.document_heads set projection=jsonb_set(projection,'{text}',to_jsonb(repeat('x',1048577))) where page_id='e3000000-0000-4000-8000-000000000001';
+update public.document_heads set projection=jsonb_set(projection,'{text}',to_jsonb(repeat('x',8388609))) where page_id='e3000000-0000-4000-8000-000000000001';
 set local role anon;
-select throws_ok($$select public.read_page_publication(current_setting('sharing.source'))$$,'54000',null,'oversize public content fails explicitly without silent truncation');
+select throws_ok($$select public.read_page_publication(current_setting('sharing.source'))$$,'54000',null,'content beyond the canonical 8 MiB budget fails explicitly without truncation');
 reset role;
 update public.document_heads set projection=jsonb_set(projection,'{text}','"restored"') where page_id='e3000000-0000-4000-8000-000000000001';
 update public.workspace_members set role='owner' where workspace_id='e2000000-0000-4000-8000-000000000001' and user_id='e1000000-0000-4000-8000-000000000004';

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Icon } from "@/components/icon";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   duplicateBlockSelection,
   insertBlock,
@@ -9,10 +10,12 @@ import {
   removeBlockSelection,
 } from "../model/block-commands";
 import { canContainBlock } from "../model/block-schema";
-import { BLOCK_COMMANDS } from "./command-catalog";
+import { blockCommands } from "./command-catalog";
 import type { PageEditorController } from "./page-editor-controller";
 
 export function PageEditorBlockActions({ id, controller }: { id: string; controller: PageEditorController }) {
+  const t = useTranslations();
+  const BLOCK_COMMANDS = blockCommands(t);
   const { page } = controller.session;
   const [command, setCommand] = useState("paragraph");
   const [promote, setPromote] = useState(false);
@@ -23,7 +26,7 @@ export function PageEditorBlockActions({ id, controller }: { id: string; control
   if (!source) return null;
   return (
     <details className="editor-block-actions">
-      <summary aria-label="Ações do bloco">
+      <summary aria-label={t("editor.blockActions")}>
         <Icon name="more" />
       </summary>
       <div className="editor-block-actions-panel">
@@ -37,7 +40,7 @@ export function PageEditorBlockActions({ id, controller }: { id: string; control
             }
           }}
         >
-          Duplicar bloco
+          {t("editor.duplicateBlock")}
         </button>
         <button
           type="button"
@@ -46,7 +49,7 @@ export function PageEditorBlockActions({ id, controller }: { id: string; control
             controller.setSelected([]);
           }}
         >
-          Remover bloco
+          {t("editor.removeBlock")}
         </button>
         <button
           type="button"
@@ -59,10 +62,10 @@ export function PageEditorBlockActions({ id, controller }: { id: string; control
             if (added) controller.focus(added);
           }}
         >
-          Adicionar texto abaixo
+          {t("editor.addTextBelow")}
         </button>
         <label>
-          Transformar em
+          {t("editor.transformInto")}
           <select value={command} onChange={(event) => setCommand(event.currentTarget.value)}>
             {BLOCK_COMMANDS.map((item) => (
               <option key={item.id} value={item.id}>
@@ -77,7 +80,7 @@ export function PageEditorBlockActions({ id, controller }: { id: string; control
             checked={promote}
             onChange={(event) => setPromote(event.currentTarget.checked)}
           />
-          Preservar filhos como blocos irmãos
+          {t("editor.preserveChildren")}
         </label>
         <button
           type="button"
@@ -86,18 +89,18 @@ export function PageEditorBlockActions({ id, controller }: { id: string; control
             if (item) controller.choose(item, id, promote);
           }}
         >
-          Transformar bloco
+          {t("editor.transformBlock")}
         </button>
         <label>
-          Mover para
+          {t("common.moveTo")}
           <select value={parent} onChange={(event) => setParent(event.currentTarget.value)}>
-            <option value="">Raiz da página</option>
+            <option value="">{t("editor.pageRoot")}</option>
             {all
               .filter((block) => block.id !== id && canContainBlock(block.type, source.type))
               .map((block, index) => (
                 <option key={block.id} value={block.id}>
-                  Bloco {index + 1} ·{" "}
-                  {BLOCK_COMMANDS.find((item) => item.type === block.type)?.label ?? "Grupo"}
+                  {t("editor.block")} {index + 1} ·{" "}
+                  {BLOCK_COMMANDS.find((item) => item.type === block.type)?.label ?? t("editor.group")}
                 </option>
               ))}
           </select>
@@ -108,7 +111,7 @@ export function PageEditorBlockActions({ id, controller }: { id: string; control
             controller.preserveFocus(() => moveBlockSelection(page, selected, parent || null, null), id)
           }
         >
-          Mover blocos
+          {t("editor.moveBlocks")}
         </button>
       </div>
     </details>

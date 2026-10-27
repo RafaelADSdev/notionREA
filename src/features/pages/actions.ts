@@ -1,11 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { uuidSchema } from "@/features/auth/validation";
-import { pageMetadataSchema, type PageActionState } from "./model/validation";
+import { getTranslations } from "@/lib/i18n/server";
+import { createClient } from "@/lib/supabase/server";
+import { type PageActionState, pageMetadataSchema } from "./model/validation";
 
 const revisionSchema = z.coerce.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const optionalId = (value: FormDataEntryValue | null) =>
@@ -13,12 +14,11 @@ const optionalId = (value: FormDataEntryValue | null) =>
 function invalidate(workspaceId: string) {
   revalidatePath(`/w/${workspaceId}`, "layout");
 }
-function failure(code?: string): PageActionState {
+async function failure(code?: string): Promise<PageActionState> {
+  const t = await getTranslations();
+
   return {
-    error:
-      code === "40001"
-        ? "Esta página mudou em outra sessão. Recarregue antes de reaplicar sua alteração."
-        : "Não foi possível concluir. Confira seu acesso, o destino e tente novamente.",
+    error: code === "40001" ? t("pages.staleRevision") : t("pages.actionFailed"),
   };
 }
 
@@ -49,12 +49,14 @@ export async function createPage(_previous: PageActionState, form: FormData): Pr
 }
 
 export async function savePageMetadata(_previous: PageActionState, form: FormData): Promise<PageActionState> {
+  const t = await getTranslations();
+
   const page = uuidSchema.safeParse(form.get("pageId"));
   const workspace = uuidSchema.safeParse(form.get("workspaceId"));
   const revision = revisionSchema.safeParse(form.get("revision"));
   const metadata = pageMetadataSchema.safeParse({ title: form.get("title"), icon: form.get("icon") });
   if (!page.success || !workspace.success || !revision.success || !metadata.success)
-    return { error: "Use título de até 500 caracteres e, se quiser, um único emoji." };
+    return { error: t("pages.metadataLimit") };
   const client = await createClient(true);
   const { error } = await client.rpc("update_page", {
     p_page_id: page.data,
@@ -63,10 +65,12 @@ export async function savePageMetadata(_previous: PageActionState, form: FormDat
   });
   if (error) return failure(error.code);
   invalidate(workspace.data);
-  return { message: "Página atualizada." };
+  return { message: t("pages.updated") };
 }
 
 export async function movePage(_previous: PageActionState, form: FormData): Promise<PageActionState> {
+  const t = await getTranslations();
+
   const page = uuidSchema.safeParse(form.get("pageId"));
   const workspace = uuidSchema.safeParse(form.get("workspaceId"));
   const revision = revisionSchema.safeParse(form.get("revision"));
@@ -106,18 +110,20 @@ export async function movePage(_previous: PageActionState, form: FormData): Prom
       requiresConfirmation: true,
       affectedPages: result.data.affected_pages,
       ...(result.data.preview_hash ? { previewHash: result.data.preview_hash } : {}),
-      message: "O destino muda quem pode acessar esta página ou suas filhas. Revise e confirme para mover.",
+      message: t("pages.moveAccessNotice"),
     };
   invalidate(workspace.data);
-  return { message: "Página movida." };
+  return { message: t("pages.moved") };
 }
 
 export async function trashPage(_previous: PageActionState, form: FormData): Promise<PageActionState> {
+  const t = await getTranslations();
+
   const page = uuidSchema.safeParse(form.get("pageId"));
   const workspace = uuidSchema.safeParse(form.get("workspaceId"));
   const revision = revisionSchema.safeParse(form.get("revision"));
   if (!page.success || !workspace.success || !revision.success || form.get("confirmTrash") !== "on")
-    return { error: "Confirme a remoção da página e das suas filhas." };
+    return { error: t("pages.confirmRemoval") };
   const client = await createClient(true);
   const { error } = await client.rpc("remove_page", {
     p_page_id: page.data,
@@ -129,6 +135,8 @@ export async function trashPage(_previous: PageActionState, form: FormData): Pro
 }
 
 export async function restorePage(_previous: PageActionState, form: FormData): Promise<PageActionState> {
+  const t = await getTranslations();
+
   const page = uuidSchema.safeParse(form.get("pageId"));
   const workspace = uuidSchema.safeParse(form.get("workspaceId"));
   const revision = revisionSchema.safeParse(form.get("revision"));
@@ -152,8 +160,7 @@ export async function restorePage(_previous: PageActionState, form: FormData): P
   });
   if (error || !data)
     return {
-      error:
-        "Não foi possível restaurar neste destino. Escolha a raiz ou uma página ativa em que você possa organizar o conteúdo.",
+      error: t("pages.restoreFailed"),
     };
   const result = z
     .object({
@@ -169,18 +176,20 @@ export async function restorePage(_previous: PageActionState, form: FormData): P
       requiresConfirmation: true,
       affectedPages: result.data.affected_pages,
       ...(result.data.preview_hash ? { previewHash: result.data.preview_hash } : {}),
-      message: "Restaurar neste local muda quem pode acessar a página. Revise o destino e confirme.",
+      message: t("pages.restoreAccessNotice"),
     };
   invalidate(workspace.data);
   redirect(`/w/${workspace.data}/p/${page.data}`);
 }
 
 export async function favoritePage(pageId: string, workspaceId: string): Promise<boolean> {
+  const t = await getTranslations();
+
   uuidSchema.parse(pageId);
   uuidSchema.parse(workspaceId);
   const client = await createClient(true);
   const { data, error } = await client.rpc("toggle_page_favorite", { p_page_id: pageId });
-  if (error) throw new Error("Não foi possível atualizar o favorito.");
+  if (error) throw new Error(t("pages.favoriteFailed"));
   invalidate(workspaceId);
   return data;
 }

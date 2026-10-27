@@ -1,5 +1,7 @@
 "use client";
+
 import { useContext, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 import type { DatabaseReference } from "../types";
 import { PeopleSearchContext } from "./database-context";
 
@@ -16,6 +18,8 @@ export function PeoplePicker({
   disabled: boolean;
   onChange: (value: string[]) => void;
 }) {
+  const t = useTranslations();
+
   const find = useContext(PeopleSearchContext);
   const [items, setItems] = useState<DatabaseReference[]>([]);
   const [cursor, setCursor] = useState<string | null | undefined>(undefined);
@@ -48,7 +52,7 @@ export function PeoplePicker({
               checked
               onChange={() => onChange(selected.filter((item) => item !== id))}
             />
-            Pessoa indisponível
+            {t("database.personUnavailable")}
           </label>
         ))}
       {find && cursor !== null && (
@@ -62,13 +66,13 @@ export function PeoplePicker({
               setItems((previous) => [...previous, ...result.items]);
               setCursor(result.nextCursor);
             } catch {
-              setError("Não foi possível carregar os membros.");
+              setError(t("database.membersFailed"));
             } finally {
               setPending(false);
             }
           }}
         >
-          {pending ? "Carregando…" : "Carregar mais membros"}
+          {pending ? t("common.loading") : t("database.moreMembers")}
         </button>
       )}
       {error && <p role="alert">{error}</p>}
