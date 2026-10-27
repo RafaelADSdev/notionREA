@@ -18,6 +18,7 @@ Use um projeto Supabase separado por ambiente e um projeto Vercel com Node 24, f
 | `ENABLE_COLLABORATION_SPIKE` | Sempre `false` em produção |
 | `LOCAL_PREVIEW_ENABLED` | Sempre `false` em produção; bypass local também exige portas/origens loopback específicas |
 | `BLOCO_SETUP_MODE` | `true` enquanto o backend estiver adiado; `false` após configuração e validação do serviço hospedado |
+| `BLOCO_LOCAL_MODE` | `true` para workspace individual no navegador sem banco; precede setup e mantém APIs remotas fechadas |
 
 Não compartilhe bancos, chaves ou contas pessoais entre produção e previews de PR. Variáveis públicas exigem novo build quando alteradas. `.env.example` contém nomes e exemplos, nunca valores reais.
 

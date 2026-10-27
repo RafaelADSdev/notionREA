@@ -1,7 +1,13 @@
 import "server-only";
 
+export function isLocalMode(): boolean {
+  return process.env.BLOCO_LOCAL_MODE === "true";
+}
+
 /** An unconfigured hosted installation must not attempt to use a local database. */
-export function isSetupMode(environment: Readonly<Record<string, string | undefined>> = process.env): boolean {
+export function isSetupMode(
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+): boolean {
   if (environment.BLOCO_SETUP_MODE === "true") return true;
   return (
     environment.VERCEL === "1" &&

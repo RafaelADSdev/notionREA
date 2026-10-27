@@ -36,6 +36,7 @@ export class DocumentReferences {
   readonly files: BlockFileResolver;
   private readonly workspaceId: string;
   private readonly path: string;
+  private readonly fetcher: typeof fetch;
   private readonly onUnavailable: (() => void) | undefined;
   private readonly mentionValues = new Map<string, Mention>();
   private readonly fileValues = new Map<string, PageFileInfo>();
@@ -51,16 +52,20 @@ export class DocumentReferences {
   private unavailable = false;
   private epoch = 0;
 
-  constructor(options: { workspaceId: string; pageId: string; onUnavailable?: () => void }) {
+  constructor(options: {
+    workspaceId: string;
+    pageId: string;
+    onUnavailable?: () => void;
+    fetcher?: typeof fetch;
+  }) {
     this.workspaceId = uuid.parse(options.workspaceId);
     this.path = `/api/documents/${uuid.parse(options.pageId)}/references`;
     this.onUnavailable = options.onUnavailable;
+    this.fetcher = options.fetcher ?? fetch;
     this.mentions = {
       resolve: (id) => {
         const value = this.mentionValues.get(id.toLowerCase());
-        return value
-          ? { title: value.title, href: `/w/${this.workspaceId}/p/${value.id}` }
-          : null;
+        return value ? { title: value.title, href: `/w/${this.workspaceId}/p/${value.id}` } : null;
       },
       subscribe: (listener) => this.subscribe(this.mentionListeners, listener),
     };
@@ -187,7 +192,7 @@ export class DocumentReferences {
       mentions: [...batch.mentions.keys()],
       files: [...batch.files.keys()],
     });
-    const response = await fetch(this.path, {
+    const response = await this.fetcher(this.path, {
       method: "POST",
       credentials: "same-origin",
       cache: "no-store",

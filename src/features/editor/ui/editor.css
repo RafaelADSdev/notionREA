@@ -911,6 +911,10 @@ th.editor-table-cell {
 .block-comments-dialog::backdrop {
   background: #0008;
 }
+.editor-formatting-toolbar[data-unavailable="true"] {
+  overflow: visible;
+  flex-wrap: wrap;
+}
 @media (hover: none) {
   .editor-block-comment {
     position: static;

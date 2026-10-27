@@ -153,4 +153,12 @@ Para parar o ambiente local, execute `pnpm supabase stop`. Isso não encerra o D
 
 ## Publicação e uso
 
+### Modo local no navegador
+
+`BLOCO_LOCAL_MODE=true` ativa o workspace individual em IndexedDB, tem precedência sobre a tela de preparação e não inicializa clientes de banco/sessão. Não reutiliza contas nem os dados da stack pessoal. `BLOCO_SETUP_MODE=true` pode permanecer ligado: as APIs e ações de nuvem continuam respondendo503. Preferências de tema/idioma usam apenas localStorage; conteúdo e recibos usam transações IndexedDB.
+
+O mesmo domínio, perfil e navegador conservam as notas entre recargas e deploys; outros dispositivos, perfis, abas anônimas e aliases de domínio têm armazenamento separado. Não há sincronização remota nem promessa de carregar o app sem internet. Use Baixar backup para guardar o JSON fora do navegador e Restaurar backup para adicionar páginas ausentes; notas existentes não são substituídas. Backup até32MiB,2500páginas,8MiB por documento, com validação em worker de cinco segundos. Limpar dados do site ou a política de descarte do navegador pode remover esse armazenamento.
+
+Depois de `pnpm test:build`, `pnpm test:local` sobe somente o app em3002 com credenciais de backend vazias. Não exige reset ou mudanças no banco. Os testes usam perfis efêmeros e comprovam recarga, backup em perfil vazio, edições entre abas, erro de quota/retry, idioma/tema e teclado/axe móvel. O comportamento compartilhado com o editor sincronizado conserva seus testes existentes.
+
 O [guia de uso](user-guide.md) apresenta escrita, bases, colaboração e intercâmbio. Para hospedar, siga [deploy](deploy.md) e [operação/recuperação](operations.md). Mantenha limite global Storage de 50 MiB para ZIPs e limite próprio de 25 MiB no bucket de anexos; mudanças dessa configuração local exigem reiniciar apenas a stack pretendida, preservando seus volumes. Não reinicie ou resete a stack pessoal como parte dos testes.

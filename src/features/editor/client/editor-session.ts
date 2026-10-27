@@ -1,11 +1,22 @@
 "use client";
 import * as Y from "yjs";
-import { DurableDocumentProvider, type SaveState } from "../model/durable-document-provider";
+import {
+  DurableDocumentProvider,
+  type SaveState,
+  type DocumentTransport,
+} from "../model/durable-document-provider";
 import { initialContentUpdate } from "../model/initial-content";
 import { StablePage } from "../model/stable-page";
 import { HttpDocumentTransport } from "./http-transport";
 
-type SessionOptions = { userId: string; workspaceId: string; pageId: string; editable: boolean };
+type SessionOptions = {
+  userId: string;
+  workspaceId: string;
+  pageId: string;
+  editable: boolean;
+  transport?: DocumentTransport;
+  local?: boolean;
+};
 export type PendingDraft = { pageId: string; workspaceId: string; state: SaveState };
 const cache = new Map<string, EditorSession>();
 const pendingListeners = new Set<() => void>();
@@ -44,6 +55,7 @@ export class EditorSession {
   readonly userId: string;
   readonly workspaceId: string;
   readonly pageId: string;
+  readonly local: boolean;
   private editable: boolean;
   private leases = 0;
   private disposed = false;
@@ -61,6 +73,7 @@ export class EditorSession {
     this.userId = options.userId;
     this.workspaceId = options.workspaceId;
     this.pageId = options.pageId;
+    this.local = options.local ?? false;
     this.editable = options.editable;
     this.page = new StablePage(this.document, this.actor);
     this.roots = ["meta", "blocks", "placements", "removed", "attrs"].map((name) =>
@@ -69,7 +82,7 @@ export class EditorSession {
     for (const root of this.roots) root.observeDeep(this.structureChanged);
     this.provider = new DurableDocumentProvider({
       document: this.document,
-      transport: new HttpDocumentTransport(this.pageId),
+      transport: options.transport ?? new HttpDocumentTransport(this.pageId),
       editable: this.editable,
       initialUpdate: initialContentUpdate(),
       onStatus: this.statusChanged,

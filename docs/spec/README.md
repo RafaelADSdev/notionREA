@@ -16,6 +16,7 @@ Aplicação web para pessoas e pequenas equipes criarem documentos e organizarem
 | databases | Schema, valores, registros, views e templates | pages, editor | [Databases](databases.md) |
 | collaboration | Acesso compartilhado, presença, comentários, publicação e simultaneidade | foundation, pages, editor, databases | [Colaboração e segurança](collaboration-security.md) |
 | interchange | Importação, exportação, idiomas, escala e lançamento | capacidades anteriores | [Intercâmbio e qualidade](interchange-quality.md) |
+| local | Workspace individual persistido no navegador, solicitado posteriormente | editor, sem Auth/DB remoto | [Modo local](local-workspace.md) |
 
 Ordem de entrega: M1 → M2 → M3 → M4 → M5 → M6. Os contratos de autorização e sincronização devem orientar M1/M3 antes da liberação da colaboração no M5. A prova de risco M1 não equivale a antecipar todo o M5. Progresso e tarefas vivem somente em [PLAN](../PLAN.md).
 

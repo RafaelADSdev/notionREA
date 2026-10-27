@@ -11,10 +11,10 @@ export function PageEditorStatus({ session }: { session: EditorSession }) {
   const labels: Record<SaveState, string> = {
     loading: t("editor.loading"),
     dirty: t("editor.localChanges"),
-    saving: t("editor.sending"),
-    saved: t("editor.saved"),
+    saving: t(session.local ? "local.saving" : "editor.sending"),
+    saved: t(session.local ? "local.saved" : "editor.saved"),
     error: t("editor.saveFailedNotice"),
-    denied: t("editor.accessUnavailableNotice"),
+    denied: t(session.local ? "local.pageUnavailable" : "editor.accessUnavailableNotice"),
     unsupported: t("editor.updateRequiredNotice"),
   };
   const status = useSyncExternalStore<SaveState>(session.subscribeStatus, session.getStatus, () => "loading");

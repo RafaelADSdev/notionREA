@@ -1,4 +1,14 @@
 const messages = {
+  "local.unsupportedBlock": [
+    "Este bloco foi preservado no backup, mas não está disponível no modo local.",
+    "This block is preserved in the backup but is unavailable in local mode.",
+  ],
+  "local.saving": ["Salvando neste navegador…", "Saving in this browser…"],
+  "local.saved": ["Salvo neste navegador", "Saved in this browser"],
+  "local.pageUnavailable": [
+    "Esta página foi movida para a lixeira ou não está disponível neste navegador.",
+    "This page was moved to trash or is unavailable in this browser.",
+  ],
   "setup.status": ["Aguardando conexão de dados", "Awaiting a data connection"],
   "setup.title": ["Um espaço para suas próximas ideias.", "A space for your next ideas."],
   "setup.description": [

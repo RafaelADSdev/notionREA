@@ -80,6 +80,7 @@ export function usePageEditorController(
   const [error, setError] = useState("");
   const [comment, setComment] = useState<{ blockId: string; anchor?: CommentAnchor } | null>(null);
   const openComments = (blockId: string) => {
+    if (session.local) return;
     const editor = registry.current.get(blockId);
     const binding = editor ? ySyncPluginKey.getState(editor.state)?.binding : undefined;
     const relative =
@@ -366,6 +367,7 @@ export function usePageEditorController(
     },
   };
   const choose = (command: BlockCommand, id = menu?.id ?? active?.id, promoteChildren = false) => {
+    if (session.local && ["image", "file", "databaseRef"].includes(command.type)) return;
     if (!id) return;
     const requested =
       !menu && selectedRef.current.includes(id) ? new Set(selectedRef.current) : new Set([id]);

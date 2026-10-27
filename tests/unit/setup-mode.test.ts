@@ -6,6 +6,17 @@ import { proxy } from "../../src/proxy";
 const auth = vi.hoisted(() => vi.fn());
 vi.mock("@supabase/ssr", () => ({ createServerClient: auth }));
 describe("hosted setup without a backend", () => {
+  it("routes an explicitly local workspace without initializing a cloud session", async () => {
+    vi.stubEnv("BLOCO_LOCAL_MODE", "true");
+    try {
+      const page = await proxy(new NextRequest("https://bloco.example.test/"));
+      expect(page.headers.get("x-middleware-rewrite")).toBe("https://bloco.example.test/local");
+      expect((await proxy(new NextRequest("https://bloco.example.test/api/pages"))).status).toBe(503);
+      expect(auth).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
   it("requires an explicit flag locally and fails closed on incomplete hosted configuration", () => {
     expect(isSetupMode({})).toBe(false);
     expect(isSetupMode({ VERCEL: "1" })).toBe(true);

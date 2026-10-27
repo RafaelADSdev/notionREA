@@ -22,6 +22,7 @@
     "test:perf:editor": "node tests/performance/editor-validation.mjs",
     "local:env": "node scripts/local-env.mjs",
     "test:e2e": "playwright test",
+    "test:local": "playwright test --config playwright.local.config.ts",
     "test:env": "node scripts/test-stack.mjs start",
     "test:prepare": "node scripts/test-stack.mjs prepare",
     "test:db:reset": "node scripts/test-stack.mjs reset",

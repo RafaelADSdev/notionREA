@@ -2,7 +2,7 @@
 
 Workspace original de notas e bases de dados por blocos. Nome provisório; produto web com conteúdo colaborativo, organização hierárquica e identidade própria.
 
-[Publicação na Vercel](https://bloco-jet.vercel.app): tela de preparação enquanto o backend hospedado está adiado. O workspace completo depende do Supabase configurado; o estado e as pendências ficam no plano.
+[Publicação na Vercel](https://bloco-jet.vercel.app): modo local com páginas e notas persistidas no navegador por IndexedDB, sem backend. Os recursos sincronizados continuam dependendo do Supabase; o estado real e as pendências ficam no plano. Use sempre o mesmo domínio/perfil e baixe backups das suas notas.
 
 Aplicação web com Next.js App Router, TypeScript estrito, Tailwind e Supabase. A fundação reúne autenticação, workspaces/membros, políticas de acesso e a base do conteúdo colaborativo. O escopo e o estado de cada marco estão exclusivamente em [docs/PLAN.md](docs/PLAN.md).
 
@@ -38,6 +38,7 @@ Abra [Bloco local](http://127.0.0.1:3000). Mensagens de confirmação e recupera
 | `pnpm test:perf:editor` | Validar 5.000 blocos e lotes causais no worker real já compilado |
 | `pnpm test:rls` | Testes de políticas e integridade no banco local |
 | `pnpm test:e2e` | Fluxos reais de navegador contra a stack local |
+| `pnpm test:local` | Persistência IndexedDB, backup/restauração, abas e falha de gravação em3002, sem backend |
 | `pnpm test:env` | Preparar/iniciar a stack de testes isolada |
 | `pnpm test:db:reset` | Recriar somente o banco descartável de testes |
 | `pnpm test:build` | Build isolado para os testes de navegador |

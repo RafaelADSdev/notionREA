@@ -282,6 +282,8 @@ function PageEditorBlock({
         onSelect={(databaseId) => controller.run(() => page.setBlockAttributes(block.id, { databaseId }))}
       />
     );
+  if (controller.session.local && ["image", "file", "databaseRef"].includes(block.type))
+    body = <p className="notice">{t("local.unsupportedBlock")}</p>;
   return (
     <fieldset
       ref={frameRef}
@@ -307,14 +309,16 @@ function PageEditorBlock({
         }
       }}
     >
-      <button
-        type="button"
-        className="editor-block-comment"
-        aria-label={t("editor.blockCommentsNumber", { number: index + 1 })}
-        onClick={() => controller.openComments(block.id)}
-      >
-        {t("comments.title")}
-      </button>
+      {!controller.session.local && (
+        <button
+          type="button"
+          className="editor-block-comment"
+          aria-label={t("editor.blockCommentsNumber", { number: index + 1 })}
+          onClick={() => controller.openComments(block.id)}
+        >
+          {t("comments.title")}
+        </button>
+      )}
       {editable && (
         <div className="editor-block-controls">
           <button

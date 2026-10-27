@@ -15,7 +15,9 @@ import type { PageEditorController } from "./page-editor-controller";
 
 export function PageEditorBlockActions({ id, controller }: { id: string; controller: PageEditorController }) {
   const t = useTranslations();
-  const BLOCK_COMMANDS = blockCommands(t);
+  const BLOCK_COMMANDS = blockCommands(t).filter(
+    (command) => !controller.session.local || !["image", "file", "databaseRef"].includes(command.type),
+  );
   const { page } = controller.session;
   const [command, setCommand] = useState("paragraph");
   const [promote, setPromote] = useState(false);

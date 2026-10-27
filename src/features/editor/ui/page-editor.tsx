@@ -332,6 +332,7 @@ const PageEditorBody = memo(function PageEditorBody({
         )}
         {controller.menu?.kind === "slash" && canEdit && (
           <CommandMenu
+            local={session.local}
             query={controller.menu.query}
             anchor={controller.menu.anchor}
             {...(anchorElement ? { anchorElement } : {})}
@@ -339,7 +340,7 @@ const PageEditorBody = memo(function PageEditorBody({
             onClose={() => controller.setMenu(null)}
           />
         )}
-        {controller.menu?.kind === "mention" && canEdit && (
+        {controller.menu?.kind === "mention" && canEdit && !session.local && (
           <MentionMenu
             workspaceId={session.workspaceId}
             query={controller.menu.query}
@@ -404,6 +405,45 @@ export function PageEditor(props: PageEditorProps) {
         editable={props.editable}
         onCursor={collaboration.publishCursor}
       />
+    </section>
+  );
+}
+
+const noCursor = () => {};
+const emptyLocalReferences: typeof fetch = async () => Response.json({ mentions: [], files: [] });
+/** The same block editor with a browser-owned durable transport and no cloud hooks. */
+export function LocalPageEditor(
+  props: PageEditorProps & {
+    transport: import("../model/durable-document-provider").DocumentTransport;
+    onSession: (session: EditorSession) => void;
+  },
+) {
+  const t = useTranslations();
+  const { onSession } = props;
+  const [session] = useState(() => getEditorSession({ ...props, local: true }));
+  const [references] = useState(
+    () =>
+      new DocumentReferences({
+        workspaceId: props.workspaceId,
+        pageId: props.pageId,
+        fetcher: emptyLocalReferences,
+      }),
+  );
+  const [lifecycle] = useState(() => new ReferenceLifetime());
+  useEffect(() => {
+    const release = session.mount();
+    const releaseReferences = lifecycle.acquire(references);
+    onSession(session);
+    return () => {
+      release();
+      releaseReferences();
+    };
+  }, [session, references, lifecycle, onSession]);
+  useEditorNavigation(session, references);
+  return (
+    <section className="page-editor" aria-label={t("editor.pageContent")}>
+      <PageEditorStatus session={session} />
+      <PageEditorBody session={session} references={references} editable onCursor={noCursor} />
     </section>
   );
 }

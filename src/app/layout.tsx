@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LocaleProvider } from "@/lib/i18n/client";
 import { getTranslations } from "@/lib/i18n/server";
 import { currentUser } from "@/lib/supabase/server";
-import { isSetupMode } from "@/lib/setup-mode";
+import { isLocalMode, isSetupMode } from "@/lib/setup-mode";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const t = await getTranslations();
-  const setup = isSetupMode();
+  const setup = isLocalMode() || isSetupMode();
   const user = setup ? null : await currentUser();
   const scope = user?.id ?? "anon";
   const saved = (await cookies()).get(`bloco-theme-${scope}`)?.value;

@@ -15,6 +15,7 @@ export type CommandMenuProps = {
   label?: string;
   id?: string;
   anchorElement?: HTMLElement;
+  local?: boolean;
 };
 
 /** CSS limits the menu size; this helper positions that bounded box inside the viewport. */
@@ -35,12 +36,19 @@ export function CommandMenu({
   label,
   id,
   anchorElement,
+  local = false,
 }: CommandMenuProps) {
   const t = useTranslations();
   const generatedId = useId();
   const { left, top } = anchor;
   const listId = id ?? `block-commands-${generatedId}`;
-  const commands = useMemo(() => filterBlockCommands(query, t), [query, t]);
+  const commands = useMemo(
+    () =>
+      filterBlockCommands(query, t).filter(
+        (command) => !local || !["image", "file", "databaseRef"].includes(command.type),
+      ),
+    [query, t, local],
+  );
   const [selection, setSelection] = useState({ query, id: commands[0]?.id });
   const selectedIndex =
     selection.query === query ? commands.findIndex((command) => command.id === selection.id) : 0;

@@ -2,10 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEnvironment } from "@/lib/env";
 import type { Database } from "@/lib/supabase/database.types";
-import { isSetupMode } from "@/lib/setup-mode";
+import { isLocalMode, isSetupMode } from "@/lib/setup-mode";
 
 export async function proxy(request: NextRequest) {
-  const environment = isSetupMode() ? null : getEnvironment();
+  const environment = isLocalMode() || isSetupMode() ? null : getEnvironment();
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString("base64");
   const service = environment ? new URL(environment.NEXT_PUBLIC_SUPABASE_URL) : null;
   const websocket = service ? `${service.protocol === "https:" ? "wss:" : "ws:"}//${service.host}` : "";
@@ -17,6 +17,7 @@ export async function proxy(request: NextRequest) {
     "font-src 'self'",
     `connect-src 'self' ${service?.origin ?? ""} ${websocket}`,
     "object-src 'none'",
+    "worker-src 'self'",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
@@ -29,9 +30,9 @@ export async function proxy(request: NextRequest) {
     const path = request.nextUrl.pathname;
     if ((path.startsWith("/api/") && path !== "/api/health") || !["GET", "HEAD"].includes(request.method)) {
       response = NextResponse.json({ error: "setup-required" }, { status: 503 });
-    } else if (path !== "/setup" && path !== "/api/health") {
+    } else if (path !== (isLocalMode() ? "/local" : "/setup") && path !== "/api/health") {
       const target = request.nextUrl.clone();
-      target.pathname = "/setup";
+      target.pathname = isLocalMode() ? "/local" : "/setup";
       target.search = "";
       response = NextResponse.rewrite(target, { request: { headers } });
     }

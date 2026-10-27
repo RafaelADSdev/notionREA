@@ -70,6 +70,7 @@ export function FormattingToolbar({ editor, disabled = false, onLink }: Formatti
   return (
     <div
       role="toolbar"
+      data-unavailable={unavailable}
       aria-label={t("editor.formatText")}
       className="editor-formatting-toolbar"
       onKeyDown={(event) => {
