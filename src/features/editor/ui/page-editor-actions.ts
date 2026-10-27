@@ -7,7 +7,7 @@ import type { BlockCommand } from "./command-catalog";
 import { runEditorPlan } from "./page-editor-plan";
 
 export type QueryRange = { id: string; from: number; to: number; literal: string };
-const structural = new Set(["table", "columns", "image", "file", "divider"]);
+const structural = new Set(["table", "columns", "image", "file", "divider", "databaseRef"]);
 
 function fillStructure(page: StablePage, id: string, type: string): string {
   const existing = orderedBlocks(page).filter((block) => block.parentId === id);

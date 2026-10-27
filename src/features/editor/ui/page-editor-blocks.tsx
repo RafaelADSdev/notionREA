@@ -3,16 +3,17 @@ import { useDroppable } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { useState } from "react";
 import { Icon } from "@/components/icon";
+import { InlineDatabase } from "@/features/databases/inline-database";
 import { insertBlock } from "../model/block-commands";
 import { codeLanguageSchema, contentToneSchema } from "../model/block-schema";
 import type { BlockInput } from "../model/stable-page";
 import { BlockMedia } from "./block-media";
 import { BlockText } from "./block-text";
+import { ColumnsBlock } from "./columns-block";
+import { CONTENT_TONE_LABELS } from "./content-labels";
 import { PageEditorBlockActions } from "./page-editor-block-actions";
 import type { PageEditorController } from "./page-editor-controller";
 import { TableBlock } from "./table-block";
-import { ColumnsBlock } from "./columns-block";
-import { CONTENT_TONE_LABELS } from "./content-labels";
 
 type Props = {
   blocks: readonly BlockInput[];
@@ -184,7 +185,16 @@ function PageEditorBlock({
       </button>
     );
   if (block.type === "databaseRef")
-    body = <p>Referência de base de dados. A visualização será disponibilizada com as bases.</p>;
+    body = (
+      <InlineDatabase
+        workspaceId={controller.session.workspaceId}
+        pageId={controller.session.pageId}
+        {...(typeof attrs.databaseId === "string" ? { databaseId: attrs.databaseId } : {})}
+        {...(typeof attrs.viewId === "string" ? { viewId: attrs.viewId } : {})}
+        editable={editable}
+        onSelect={(databaseId) => controller.run(() => page.setBlockAttributes(block.id, { databaseId }))}
+      />
+    );
   return (
     <fieldset
       ref={ref}

@@ -1,16 +1,19 @@
-import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient, currentUser } from "@/lib/supabase/server";
-import { uuidSchema } from "@/features/auth/validation";
-import { pageSummarySchema, breadcrumbSchema, pageDetailSchema } from "@/features/pages/model/validation";
-import { childrenOf } from "@/features/pages/queries";
-import { PageMetadataForm, FavoriteButton, MovePageForm, TrashPageForm } from "@/features/pages/forms";
-import { PageList } from "@/features/pages/page-list";
-import { CreatePageControl } from "@/features/pages/create-control";
-import { PageCover } from "@/features/pages/cover";
-import { BreadcrumbTrail } from "@/features/pages/breadcrumbs";
-import { PageEditor } from "@/features/editor/ui/page-editor";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
+import { uuidSchema } from "@/features/auth/validation";
+import { CreateDatabaseControl } from "@/features/databases/create-control";
+import { DatabaseClient } from "@/features/databases/database-client";
+import { RecordProperties } from "@/features/databases/record-properties";
+import { PageEditor } from "@/features/editor/ui/page-editor";
+import { BreadcrumbTrail } from "@/features/pages/breadcrumbs";
+import { PageCover } from "@/features/pages/cover";
+import { CreatePageControl } from "@/features/pages/create-control";
+import { FavoriteButton, MovePageForm, PageMetadataForm, TrashPageForm } from "@/features/pages/forms";
+import { breadcrumbSchema, pageDetailSchema, pageSummarySchema } from "@/features/pages/model/validation";
+import { PageList } from "@/features/pages/page-list";
+import { childrenOf } from "@/features/pages/queries";
+import { createClient, currentUser } from "@/lib/supabase/server";
 
 export default async function PageDocument({
   params,
@@ -33,7 +36,7 @@ export default async function PageDocument({
   if (!raw) notFound();
   const page = pageSummarySchema.parse(raw);
   const query = await searchParams;
-  const [access, favorites, breadcrumbs, children] = await Promise.all([
+  const [access, favorites, breadcrumbs, children, databaseResult] = await Promise.all([
     client.rpc("get_page_role", { p_page_id: pageId }),
     client
       .from("page_favorites")
@@ -43,10 +46,16 @@ export default async function PageDocument({
       .maybeSingle(),
     client.rpc("list_page_breadcrumbs", { p_page_id: pageId }),
     childrenOf(workspaceId, pageId, query.afterPosition, query.afterId),
+    client.rpc("get_page_database", { p_page_id: pageId }),
   ]);
   if (access.error || breadcrumbs.error || favorites.error)
     throw new Error("Não foi possível carregar os detalhes da página.");
   const editable = access.data === "owner" || access.data === "editor";
+  if (databaseResult.error) throw new Error("Não foi possível carregar os detalhes da base.");
+  const database = z
+    .strictObject({ databaseId: z.uuid(), isContainer: z.boolean(), isTemplate: z.boolean() })
+    .nullable()
+    .parse(databaseResult.data);
   const crumbs = z.array(breadcrumbSchema).parse(breadcrumbs.data);
   const last = children.items.at(-1);
   return (
@@ -89,6 +98,15 @@ export default async function PageDocument({
           {page.title || "Página sem título"}
         </h1>
       )}
+      {database?.isContainer && <DatabaseClient databaseId={database.databaseId} workspaceId={workspaceId} />}
+      {database && !database.isContainer && (
+        <RecordProperties
+          databaseId={database.databaseId}
+          pageId={pageId}
+          workspaceId={workspaceId}
+          isTemplate={database.isTemplate}
+        />
+      )}
       <PageEditor
         key={pageId}
         userId={user.id}
@@ -100,6 +118,7 @@ export default async function PageDocument({
         <div className="section-heading">
           <h2>Subpáginas</h2>
           {editable && <CreatePageControl workspaceId={workspaceId} parentId={pageId} />}
+          {editable && <CreateDatabaseControl workspaceId={workspaceId} parentId={pageId} />}
         </div>
         <PageList pages={children.items} workspaceId={workspaceId} canReorder={editable} />
         {children.more && last && (

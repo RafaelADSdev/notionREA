@@ -1,6 +1,6 @@
 ---
 name: Bloco
-description: Sistema mineral/editorial para autenticação, páginas, editor de blocos e trabalho em equipe.
+description: Sistema mineral/editorial para autenticação, páginas, editor de blocos, bases de dados e trabalho em equipe.
 colors:
   accent: "#344cb7"
   on-accent: "#ffffff"
@@ -149,7 +149,7 @@ components:
 
 O sistema entregue combina papel quente, tinta azulada e planos discretos para autenticação, navegação de workspace, organização de páginas, escrita por blocos e gestão de equipe. O ritmo editorial aparece na hierarquia tipográfica e no espaço entre grupos; os controles mantêm uma linguagem operacional de uso frequente. Listas de páginas e subpáginas usam linhas contínuas e espaço aberto; o editor mantém o texto no mesmo plano de trabalho.
 
-O símbolo autoral de três lâminas e o ponto cobre identificam o produto. A tipografia do sistema e os temas claro/escuro preservam a direção aprovada em PRODUCT.md e na ADR-006. Este registro deriva de `src/app/globals.css`, `src/features/pages/pages.css`, `src/features/editor/ui/editor.css`, dos componentes compartilhados e das superfícies implementadas até o M3. As capturas sintéticas de M2/M3 ficam em `.impeccable/review/`; este acréscimo foi extraído do código entregue do editor e da composição da rota de página, sem incluir as bases do M4.
+O símbolo autoral de três lâminas e o ponto cobre identificam o produto. A tipografia do sistema e os temas claro/escuro preservam a direção aprovada em PRODUCT.md e na ADR-006. Este registro deriva de `src/app/globals.css`, `src/features/pages/pages.css`, `src/features/editor/ui/editor.css`, `src/features/databases/databases.css`, dos componentes compartilhados e das superfícies implementadas até o M4. As capturas sintéticas ficam em `.impeccable/review/`; no M4, `desktop.png` e `mobile-dark.png` registram a composição da base. Os padrões de colaboração do M5 permanecem fora deste registro.
 
 **Características principais:**
 
@@ -281,6 +281,16 @@ Uma linha de status antecede as ferramentas e comunica carregamento, alteraçõe
 
 **Regra do Estado Recuperável.** Mantenha status e ação de recuperação próximos ao conteúdo afetado; pendência, falha e indisponibilidade precisam de mensagem textual.
 
+### Bases de dados
+
+Abas tonais e roláveis alternam tabela, board, lista, calendário e galeria. Tabela e calendário mantêm rolagem interna; o board conserva colunas horizontais, enquanto lista e galeria ajustam os registros à largura disponível. Grupos usam títulos e divisórias; cartões de registro têm superfície e borda fina, sem sombra.
+
+O título abre o registro; a edição do valor fica em controle separado. Campos tipados mantêm rótulos visíveis, ações de salvar/cancelar e erro junto ao rascunho. Controles têm altura mínima (44px), foco explícito com afastamento local (2px) e números tabulares nas views de dados. Opções reutilizam as cores de conteúdo existentes.
+
+Filtros aninhados, ordenações, propriedades e templates ficam em painéis recolhíveis e grupos delimitados; controles quebram linha no móvel. Configurações e confirmações usam diálogo de superfície, sombra ambiente, fundo escurecido, Escape e retorno de foco. A prévia de alteração de propriedade explica o alcance antes da confirmação.
+
+A galeria recorta a capa autorizada preservando a largura do cartão; ausência de capa tem fallback textual. Calendário separa registros sem data, apresenta o dia em cada célula e oferece destino de data explícito. Pendência desabilita ações específicas; falha e consulta vazia têm retorno textual. Nenhum token novo de marca é introduzido pelo M4.
+
 ### Equipe e etiquetas
 
 A tabela separa pessoas por linhas finas, alinha ações com os dados e usa cabeçalhos compactos. Etiquetas de acesso usam fundo índigo diluído e texto de ação; não são botões. O avatar mostra uma inicial com os mesmos papéis de cor.
@@ -304,4 +314,4 @@ As transições se limitam a cor e fundo dos botões e da navegação (140ms, ea
 - **Não promova** medidas pontuais de uma superfície a uma regra global.
 - **Não confunda** salvamento pendente na sessão com garantia de modo offline ou rascunho persistente após fechar o navegador.
 
-Não canonizados: o título ampliado em fonte de sistema da lateral de autenticação, o espaçamento pontual entre letras da marca (-0.045em) e o glifo de exclamação usado como símbolo de callout não viram padrões reutilizáveis; são desvios do piso de acabamento para voz de destaque, espaçamento e iconografia. A família operacional aprovada permanece registrada para títulos de trabalho, corpo e controles; letras de formatação são abreviações do comando.
+Não canonizados: o título ampliado em fonte de sistema da lateral de autenticação, o espaçamento pontual entre letras da marca (-0.045em), o glifo de exclamação do callout, o rótulo acima do título da base e o glifo do fallback de galeria não viram padrões reutilizáveis; são desvios do piso de acabamento para voz de destaque, espaçamento, rótulo introdutório e iconografia. A família operacional aprovada permanece registrada para títulos de trabalho, corpo e controles; letras de formatação são abreviações do comando.

@@ -147,6 +147,14 @@ export const BLOCK_COMMANDS: readonly BlockCommand[] = [
     section: "Mídia",
     description: "Anexe um arquivo para download autorizado.",
   },
+  {
+    id: "database",
+    type: "databaseRef",
+    label: "Base de dados inline",
+    aliases: ["database", "base", "banco de dados"],
+    section: "Dados",
+    description: "Crie uma base ou mostre uma referência a uma base existente.",
+  },
 ];
 
 function normalize(value: string): string {

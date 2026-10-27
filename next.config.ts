@@ -7,6 +7,7 @@ const config: NextConfig = {
       process.env.NEXT_TEST_BUILD === "true" ? ".supabase/testing/tsconfig.json" : "tsconfig.json",
   },
   poweredByHeader: false,
+  serverExternalPackages: ["yjs"],
   outputFileTracingIncludes: { "/api/documents/*": ["./.editor-runtime/validation-worker.mjs"] },
   logging: { incomingRequests: { ignore: [/\/auth\/callback/] }, fetches: { fullUrl: false } },
   experimental: { serverActions: { bodySizeLimit: "256kb" } },

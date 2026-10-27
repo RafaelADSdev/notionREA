@@ -4,7 +4,7 @@ Atualização: 26/10/2026 (America/Sao_Paulo). Fonte única de progresso.
 
 ## Estado e próximo passo
 
-Checkpoint 1 e M1 aprovados; **M2 concluído (`318924d`), M3 concluído e M4 em execução**. M2–M6 autorizados para continuidade sem pausas pelo pedido posterior “prossiga e pode ir implementando tudo”, reiterado nas instruções de continuidade. Manter testes, revisão, commits e relatórios por marco; só interromper por bloqueio real ou decisão cara de reverter. ADRs 001–010 e adaptação ADR-012 aceitas. Implementação consulta exclusivamente especificação e fontes públicas. Próximo passo: integrar schema/consultas do M4 às cinco views já produzidas, propriedades e templates; preservar dados pessoais locais. O usuário pediu priorizar entrega funcional em uma janela de 2–3 horas e reduzir execuções repetidas de testes, mantendo verificações focadas das alterações. Composição própria detalhada na [ADR-024](adr/ADR-024-editor-composition.md).
+Checkpoint 1 e M1 aprovados; **M2 concluído (`318924d`), M3 concluído (`6bd936b`), M4 concluído e M5 em execução**. M2–M6 autorizados para continuidade sem pausas pelo pedido posterior “prossiga e pode ir implementando tudo”, reiterado nas instruções de continuidade. Manter testes, revisão, commits e relatórios por marco; só interromper por bloqueio real ou decisão cara de reverter. ADRs 001–010 e adaptação ADR-012 aceitas. Implementação consulta exclusivamente especificação e fontes públicas. Próximo passo: integrar presença/cursores, comentários e compartilhamento do M5; preservar dados pessoais locais. O usuário pediu priorizar entrega funcional em uma janela de 2–3 horas e reduzir execuções repetidas de testes, mantendo verificações focadas das alterações. Composição própria detalhada na [ADR-024](adr/ADR-024-editor-composition.md).
 
 **Dados locais a preservar:** após o M1, uma conta pessoal foi criada no Bloco local a pedido do usuário. A definição de senha foi entregue ao usuário na interface, sem fornecer senha ao agente. Esta stack deixou de conter somente fixtures descartáveis: não repetir `db reset`, purgar contas ou remover volumes contra ela. Provas futuras de banco vazio precisam de instância de teste isolada; preservar os dados locais existentes. Nenhum e-mail, senha ou token pessoal deve ser registrado no repositório.
 
@@ -34,8 +34,8 @@ Fechamento M1: build, lint, typecheck, 38 testes unitários/de modelo, 121 pgTAP
 | M1 Fundação       | Ambiente, prova de risco CRDT, auth, workspaces, RLS, shell original, CI   | Concluído |
 | M2 Páginas        | Hierarquia, CRUD, ordem, capas, favoritos, lixeira e busca                 | Concluído |
 | M3 Editor         | Blocos, inline, arquivos, interações, autosave e base colaborativa         | Concluído             |
-| M4 Databases      | Propriedades, cinco views, filtros, agrupamento e templates                | Em execução           |
-| M5 Colaboração    | Edição simultânea, presença, comentários, ACL e publicação somente leitura | Planejado             |
+| M4 Databases      | Propriedades, cinco views, filtros, agrupamento e templates                | Concluído             |
+| M5 Colaboração    | Edição simultânea, presença, comentários, ACL e publicação somente leitura | Em execução           |
 | M6 Acabamento     | Intercâmbio, idiomas, acessibilidade, performance e deploy                 | Planejado             |
 
 ## Contratos, propostas e limites
@@ -127,11 +127,22 @@ Os itens abaixo são fatias internas, não marcos adicionais que dispensem os ga
 - Dados pessoais: backup ignorado before-m3-application.dump e baseline de identidades/conteúdo/arquivos salvos antes de aplicar apenas 004/005 à stack pessoal. Verificação posterior confirmou os mesmos digests; nenhum reset/purge, mudança de conta ou sobrescrita de ambiente. Preview 3000 foi atualizado com o editor; builds substituíram .next apenas após parar seu próprio processo.
 - Higiene: revisão independente e regressões dos achados; scanner local de 283 arquivos/80 links e 31 chunks públicos sem padrões de credenciais, artefatos proibidos ou chave privilegiada no cliente. Instalação frozen sem scripts e diff-check passaram. Encerramento em commit local Conventional Commits; M4–M6 seguem sem nova pausa, sem push/deploy/recurso remoto. ADRs 030–032 registram foco, estruturas e recursos dos testes.
 
-## Execução do M4
+## Evidências de fechamento do M4
 
-- Preparação paralela independente: modelo tipado dos doze tipos, filtros, cinco views, ordenações e cursores vinculados à consulta em src/features/databases/model/; 19 casos focados passaram. UI das cinco views e controles entregue em src/features/databases/ui/ e contrato types.ts, ainda sem integração HTTP. Estes arquivos não pertencem ao commit M3.
-- Migration 006 e pgTAP novos produzidos; execução aditiva exclusiva em bloco-test e geração de tipos de trabalho autorizadas após congelar no índice Git o snapshot M3/schema005. Não confundir os tipos novos de trabalho com os do commit M3. Queries/paginação/autorização em 007 estão em construção. Nenhuma migration M4 aplicada ao banco pessoal.
-- Próximo passo: validar006, concluir007 e gerar tipos, integrar API/loader/style e criação da base/página, conectar referências inline e templates, validar os fluxos principais com checagens focadas. Todo status e decisões subsequentes ficam nesta seção.
+- Domínio relacional com seis tabelas RLS, doze propriedades tipadas, revisão por célula, schema/views com CAS e prévia vinculada a ator/revisões/valores antes de mudança incompatível. Título pertence à página; número decimal exato em string; valores read-only não são graváveis.
+- Consultas SQL com whitelist e parâmetros vinculados, escopo visível materializado uma vez, chaves estáveis/hash/revisão, cinquenta registros e prefixo até 1 MiB. Labels de relações e pessoas são resolvidos em lotes autorizados, sem e-mails. Relações opacas antigas sobrevivem sem conceder leitura nova.
+- Base inteira e referência inline conectadas às páginas/editor; propriedades de registros/templates editáveis junto ao corpo. Cinco views, filtros/sorts/grupos, organização por teclado/drag, calendários civis/instantes, galeria privada, schema/views/templates e membros paginados têm UI funcional.
+- Templates geram novas páginas/blocos/CRDT e remapeiam colunas/anexos privados, preservando rich text e Unicode em lotes causais menores que 256 KiB. Falha devolve a página criada para recuperação. Retomada durável e recibos de cópia interrompida são pendência explícita do mecanismo de jobs M6; não inferir conclusão pela existência de um snapshot.
+- Verificação concentrada conforme preferência posterior do usuário: 441 unitários/spikes, onze integrações e 668 pgTAP passaram; migrations 001–007 reproduziram banco vazio exclusivamente em bloco-test. API M4 tem onze testes focados; tipos gerados007 conferem com banco, lint/build de produção isolado/auditoria/diff verdes.
+- Um fluxo E2E comprova a mesma entidade nas cinco views, decimal zero filtrado, corpo de template com identidades novas; 9,7 s na versão final. Duas capturas sintéticas desktop claro/móvel escuro foram abertas; documento sem overflow horizontal. Primeiro seletor de aba foi corrigido para incluir seu tipo acessível, sem alterar o comportamento.
+- Yjs externalizado no servidor Next elimina carregamento duplicado no runtime; confirmação final do fluxo sem o aviso anterior. Nenhum reset/purge ou migration M4 na stack pessoal neste fechamento; preview pessoal permanece M3 até atualização aditiva e novo build.
+- Limites: benchmark de 50 mil registros e virtualização pertencem à validação de escala M6; não foram medidos nesta rodada. Cópias grandes podem precisar de jobs retomáveis, ainda pendentes; credenciais externas continuam não configuradas. ADRs033/034 registram consulta e cópia de templates.
+
+## Execução do M5
+
+- Cliente de revisão privada, catch-up, participantes e cursores relativos produzido em src/features/collaboration/, com nove testes focados próprios; ainda não integrado/liberado. Presence falha fechada sem lease/API, sem transmitir texto/e-mail/rótulos em tracks.
+- Migration008 de epochs/leases e comentários em construção, aguardando fim da janela SQL M4 para aplicação aditiva apenas no isolado; API/painel de comentários em execução. Compartilhamento e projeção pública são próximos.
+- Preferência do usuário: reduzir repetições e usar provas focadas a cada alteração; gates gerais concentrados no fechamento. M2–M6 continuam autorizados sem novas pausas. Não remover testes existentes, não rebaixar permissões/persistência para acelerar.
 
 ## Evidências de fechamento do M2
 

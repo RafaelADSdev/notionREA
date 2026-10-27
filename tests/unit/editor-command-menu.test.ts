@@ -74,14 +74,17 @@ describe("block command catalog", () => {
     view.key("ArrowDown");
     expect(view.input.getAttribute("aria-activedescendant")).toBe("commands-option-h1");
   });
-  it("covers all M3 commands with heading levels and excludes the M4 database reference", () => {
+  it("covers editor commands with heading levels and the M4 inline database reference", () => {
     expect(
       BLOCK_COMMANDS.filter((command) => command.type === "heading").map(
         (command) => command.attributes?.level,
       ),
     ).toEqual([1, 2, 3]);
     expect(new Set(BLOCK_COMMANDS.map((command) => command.id)).size).toBe(BLOCK_COMMANDS.length);
-    expect(BLOCK_COMMANDS.some((command) => command.type === "databaseRef")).toBe(false);
+    expect(BLOCK_COMMANDS.find((command) => command.type === "databaseRef")).toMatchObject({
+      id: "database",
+      label: "Base de dados inline",
+    });
   });
   it("matches accent-insensitive pt-BR and English aliases with stable ranking", () => {
     expect(filterBlockCommands("  CODIGO ")[0]?.type).toBe("code");

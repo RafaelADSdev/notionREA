@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../features/pages/pages.css";
 @import "../features/editor/ui/editor.css";
+@import "../features/databases/databases.css";
 
 :root {
   color-scheme: light;

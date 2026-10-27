@@ -3,6 +3,242 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type Database = {
   public: {
     Tables: {
+      database_cells: {
+        Row: {
+          database_id: string;
+          page_id: string;
+          property_id: string;
+          revision: number;
+          value: NonNullable<Json>;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          database_id: string;
+          page_id: string;
+          property_id: string;
+          revision?: number;
+          value: NonNullable<Json>;
+          workspace_id: string;
+        };
+        Update: {
+          database_id?: string;
+          page_id?: string;
+          property_id?: string;
+          revision?: number;
+          value?: NonNullable<Json>;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "database_cells_database_id_page_id_workspace_id_fkey";
+            columns: ["database_id", "page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "database_records";
+            referencedColumns: ["database_id", "page_id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "database_cells_property_id_database_id_workspace_id_fkey";
+            columns: ["property_id", "database_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "database_properties";
+            referencedColumns: ["id", "database_id", "workspace_id"];
+          },
+        ];
+      };
+      database_properties: {
+        Row: {
+          config: NonNullable<Json>;
+          database_id: string;
+          id: string;
+          name: string;
+          position: string;
+          revision: number;
+          type: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          config?: NonNullable<Json>;
+          database_id: string;
+          id?: string;
+          name: string;
+          position: string;
+          revision?: number;
+          type: string;
+          workspace_id: string;
+        };
+        Update: {
+          config?: NonNullable<Json>;
+          database_id?: string;
+          id?: string;
+          name?: string;
+          position?: string;
+          revision?: number;
+          type?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "database_properties_database_id_workspace_id_fkey";
+            columns: ["database_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "databases";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
+      database_records: {
+        Row: {
+          database_id: string;
+          is_template: boolean;
+          page_id: string;
+          position: string;
+          revision: number;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          database_id: string;
+          is_template?: boolean;
+          page_id: string;
+          position: string;
+          revision?: number;
+          workspace_id: string;
+        };
+        Update: {
+          database_id?: string;
+          is_template?: boolean;
+          page_id?: string;
+          position?: string;
+          revision?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "database_records_database_id_workspace_id_fkey";
+            columns: ["database_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "databases";
+            referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "database_records_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
+      database_templates: {
+        Row: {
+          database_id: string;
+          id: string;
+          page_id: string;
+          revision: number;
+          title: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          database_id: string;
+          id?: string;
+          page_id: string;
+          revision?: number;
+          title: string;
+          workspace_id: string;
+        };
+        Update: {
+          database_id?: string;
+          id?: string;
+          page_id?: string;
+          revision?: number;
+          title?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "database_templates_database_id_page_id_workspace_id_fkey";
+            columns: ["database_id", "page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "database_records";
+            referencedColumns: ["database_id", "page_id", "workspace_id"];
+          },
+        ];
+      };
+      database_views: {
+        Row: {
+          config: NonNullable<Json>;
+          database_id: string;
+          id: string;
+          name: string;
+          position: string;
+          revision: number;
+          type: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          config: NonNullable<Json>;
+          database_id: string;
+          id?: string;
+          name: string;
+          position: string;
+          revision?: number;
+          type: string;
+          workspace_id: string;
+        };
+        Update: {
+          config?: NonNullable<Json>;
+          database_id?: string;
+          id?: string;
+          name?: string;
+          position?: string;
+          revision?: number;
+          type?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "database_views_database_id_workspace_id_fkey";
+            columns: ["database_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "databases";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
+      databases: {
+        Row: {
+          id: string;
+          page_id: string;
+          revision: number;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          id?: string;
+          page_id: string;
+          revision?: number;
+          workspace_id: string;
+        };
+        Update: {
+          id?: string;
+          page_id?: string;
+          revision?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "databases_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
       document_heads: {
         Row: {
           compacted_through: number;
@@ -501,6 +737,10 @@ export type Database = {
     };
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: string };
+      add_database_record: {
+        Args: { p_database_id: string; p_is_template?: boolean; p_request_id: string; p_title: string };
+        Returns: Json;
+      };
       clear_page_cover: { Args: { p_expected_revision: number; p_page_id: string }; Returns: number };
       commit_content_document: {
         Args: {
@@ -532,6 +772,10 @@ export type Database = {
         Args: { p_expected_revision: number; p_page_id: string; p_snapshot: string };
         Returns: number;
       };
+      create_database: {
+        Args: { p_parent_page_id: string; p_request_id: string; p_title: string; p_workspace_id: string };
+        Returns: Json;
+      };
       create_invite: {
         Args: { p_email: string; p_token_hash: string; p_workspace_id: string };
         Returns: string;
@@ -541,6 +785,31 @@ export type Database = {
         Returns: string;
       };
       create_workspace: { Args: { p_name: string; p_request_id: string }; Returns: string };
+      database_people: {
+        Args: { p_after_id?: string; p_database_id: string; p_user_ids?: string[] };
+        Returns: {
+          id: string;
+          label: string;
+        }[];
+      };
+      delete_database_property: {
+        Args: {
+          p_confirm?: boolean;
+          p_database_id: string;
+          p_expected_revision: number;
+          p_preview_token?: string;
+          p_property_id: string;
+        };
+        Returns: Json;
+      };
+      delete_database_template: {
+        Args: { p_database_id: string; p_expected_revision: number; p_template_id: string };
+        Returns: undefined;
+      };
+      delete_database_view: {
+        Args: { p_database_id: string; p_expected_revision: number; p_view_id: string };
+        Returns: undefined;
+      };
       finalize_page_block_file: {
         Args: {
           p_actor_id: string;
@@ -562,6 +831,15 @@ export type Database = {
         };
         Returns: number;
       };
+      find_database_references: {
+        Args: { p_after_id?: string; p_database_id: string; p_query?: string };
+        Returns: {
+          databaseId: string;
+          id: string;
+          label: string;
+        }[];
+      };
+      get_database_metadata: { Args: { p_database_id: string }; Returns: Json };
       get_document_manifest: {
         Args: { p_page_id: string };
         Returns: {
@@ -570,8 +848,17 @@ export type Database = {
           schema_version: number;
         }[];
       };
+      get_page_database: { Args: { p_page_id: string }; Returns: Json };
       get_page_metadata: { Args: { p_page_id: string; p_workspace_id: string }; Returns: Json };
       get_page_role: { Args: { p_page_id: string }; Returns: string };
+      list_databases: {
+        Args: { p_after_id?: string; p_query?: string; p_workspace_id: string };
+        Returns: {
+          id: string;
+          pageId: string;
+          title: string;
+        }[];
+      };
       list_page_backlinks: {
         Args: { p_after_id?: string; p_page_id: string };
         Returns: {
@@ -623,6 +910,10 @@ export type Database = {
           user_id: string;
         }[];
       };
+      move_database_record: {
+        Args: { p_before_id: string; p_database_id: string; p_expected_revision: number; p_page_id: string };
+        Returns: number;
+      };
       move_page: {
         Args: {
           p_accept_acl_change?: boolean;
@@ -643,6 +934,64 @@ export type Database = {
         Args: { p_mime_type: string; p_name: string; p_page_id: string; p_size: number };
         Returns: string;
       };
+      put_database_cell: {
+        Args: {
+          p_database_id: string;
+          p_expected_revision: number;
+          p_page_id: string;
+          p_property_id: string;
+          p_value: Json;
+        };
+        Returns: number;
+      };
+      put_database_property: {
+        Args: {
+          p_config: Json;
+          p_confirm?: boolean;
+          p_database_id: string;
+          p_expected_revision: number;
+          p_id: string;
+          p_name: string;
+          p_preview_token?: string;
+          p_type: string;
+        };
+        Returns: Json;
+      };
+      put_database_template: {
+        Args: {
+          p_database_id: string;
+          p_expected_revision: number;
+          p_id: string;
+          p_page_id: string;
+          p_title: string;
+        };
+        Returns: Json;
+      };
+      put_database_view: {
+        Args: {
+          p_config: Json;
+          p_database_id: string;
+          p_expected_revision: number;
+          p_id: string;
+          p_name: string;
+          p_type: string;
+        };
+        Returns: Json;
+      };
+      query_database_records: {
+        Args: {
+          p_cursor?: Json;
+          p_database_id: string;
+          p_filter?: Json;
+          p_group_by?: string;
+          p_month?: string;
+          p_sorts?: Json;
+          p_use_filter?: boolean;
+          p_use_group?: boolean;
+          p_view_id: string;
+        };
+        Returns: Json;
+      };
       read_document_chunk: {
         Args: { p_offset?: number; p_page_id: string; p_revision: number };
         Returns: string;
@@ -651,6 +1000,14 @@ export type Database = {
       remove_page: { Args: { p_expected_revision: number; p_page_id: string }; Returns: string };
       reserve_document_validation: { Args: { p_actor_id: string; p_page_id: string }; Returns: undefined };
       reserve_page_file_validation: { Args: { p_actor_id: string; p_file_id: string }; Returns: undefined };
+      resolve_database_references: {
+        Args: { p_database_id: string; p_record_ids: string[] };
+        Returns: {
+          databaseId: string;
+          id: string;
+          label: string;
+        }[];
+      };
       resolve_page_mentions: {
         Args: { p_page_ids: string[]; p_workspace_id: string };
         Returns: {

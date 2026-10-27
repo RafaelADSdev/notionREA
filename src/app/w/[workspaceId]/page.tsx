@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CreateDatabaseControl } from "@/features/databases/create-control";
 import { CreatePageControl } from "@/features/pages/create-control";
 import { PageList } from "@/features/pages/page-list";
 import { childrenOf } from "@/features/pages/queries";
@@ -23,6 +24,7 @@ export default async function WorkspacePage({
       <div className="section-heading">
         <h2>Páginas no workspace</h2>
         <CreatePageControl workspaceId={workspaceId} />
+        <CreateDatabaseControl workspaceId={workspaceId} />
       </div>
       <PageList pages={children.items} workspaceId={workspaceId} />
       {children.more && last && (
