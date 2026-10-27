@@ -73,7 +73,7 @@ describe("cover UI results remain useful and safe across the production action b
       ok: false,
       error: expect.stringMatching(/confirmar.*Recarregue/),
     });
-    expect(mocks.privilegedRpc).not.toHaveBeenCalled();
+    expect(mocks.privilegedRpc).not.toHaveBeenCalledWith("finalize_page_cover", expect.anything());
   });
   it("returns the new revision after finalization and removal", async () => {
     expect(await finishCoverUpload(fileId, 1)).toEqual({ ok: true, revision: 2 });
@@ -97,7 +97,12 @@ vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 const actor = "71000000-0000-4000-8000-000000000002";
 const fileId = "74000000-0000-4000-8000-000000000001";
 const pageId = "73000000-0000-4000-8000-000000000001";
-const png = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10, ...new Array<number>(16).fill(0)]);
+const png = Uint8Array.from(
+  Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j8d8AAAAASUVORK5CYII=",
+    "base64",
+  ),
+);
 const metadata = {
   page_id: pageId,
   workspace_id: "72000000-0000-4000-8000-000000000001",
@@ -109,6 +114,7 @@ const metadata = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.user.mockResolvedValue({ data: { user: { id: actor } } });
+  mocks.normalRpc.mockResolvedValue({ data: "editor", error: null });
   mocks.single.mockResolvedValue({ data: metadata, error: null });
   mocks.download.mockResolvedValue({ data: new Blob([png]), error: null });
   mocks.privilegedRpc.mockResolvedValue({ data: 2, error: null });
@@ -155,9 +161,9 @@ describe("cover actions keep the service boundary behind current user authorizat
     expect(mocks.privileged).not.toHaveBeenCalled();
   });
   it("validates actual bytes before any privileged metadata mutation", async () => {
-    mocks.download.mockResolvedValue({ data: new Blob([new Uint8Array(24)]), error: null });
+    mocks.download.mockResolvedValue({ data: new Blob([new Uint8Array(png.length)]), error: null });
     await expect(finalizePageCover(fileId, 1)).rejects.toThrow("válida");
-    expect(mocks.privilegedRpc).not.toHaveBeenCalled();
+    expect(mocks.privilegedRpc).not.toHaveBeenCalledWith("finalize_page_cover", expect.anything());
   });
   it("commits only the verified file with the actor from the session and expected revision", async () => {
     expect(await finalizePageCover(fileId, 1)).toBe(2);
@@ -165,16 +171,36 @@ describe("cover actions keep the service boundary behind current user authorizat
       p_file_id: fileId,
       p_actor_id: actor,
       p_expected_revision: 1,
-      p_actual_size: 24,
+      p_actual_size: png.length,
       p_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
     });
   });
   it("exposes a recoverable conflict without leaking underlying SDK errors", async () => {
-    mocks.privilegedRpc.mockResolvedValue({
-      data: null,
-      error: { message: "synthetic-internal-private-error" },
-    });
+    mocks.privilegedRpc.mockImplementation(async (name: string) =>
+      name === "reserve_page_file_validation"
+        ? { data: null, error: null }
+        : { data: null, error: { message: "synthetic-internal-private-error" } },
+    );
     await expect(finalizePageCover(fileId, 1)).rejects.toThrow("A página mudou");
     expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
+  it("checks the durable validation budget before downloading a cover", async () => {
+    await finalizePageCover(fileId, 1);
+    expect(mocks.privilegedRpc.mock.calls[0]?.[0]).toBe("reserve_page_file_validation");
+    expect(mocks.privilegedRpc.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.download.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+  it("returns a ready cover receipt without downloading or decoding it again", async () => {
+    mocks.single.mockResolvedValue({
+      data: { ...metadata, status: "ready", actual_size: png.length, sha256: "a".repeat(64) },
+      error: null,
+    });
+    expect(await finalizePageCover(fileId, 1)).toBe(2);
+    expect(mocks.download).not.toHaveBeenCalled();
+    expect(mocks.privilegedRpc).toHaveBeenCalledWith(
+      "finalize_page_cover",
+      expect.objectContaining({ p_sha256: "a".repeat(64) }),
+    );
   });
 });

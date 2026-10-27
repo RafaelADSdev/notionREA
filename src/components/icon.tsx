@@ -17,6 +17,7 @@ type IconName =
   | "trash"
   | "chevron"
   | "drag"
+  | "more"
   | "close";
 const paths: Record<IconName, string[]> = {
   layers: ["M3 4h12v12H3z", "M7 8h12v12H7", "M11 12h12v12H11"],
@@ -43,6 +44,7 @@ const paths: Record<IconName, string[]> = {
   trash: ["M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"],
   chevron: ["m9 5 7 7-7 7"],
   drag: ["M8 5h1M15 5h1M8 12h1M15 12h1M8 19h1M15 19h1"],
+  more: ["M5 12h1M11.5 12h1M18 12h1"],
   close: ["m6 6 12 12M6 18 18 6"],
 };
 export function Icon({ name, size = 20, style }: { name: IconName; size?: number; style?: CSSProperties }) {

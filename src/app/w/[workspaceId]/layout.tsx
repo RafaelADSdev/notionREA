@@ -34,6 +34,7 @@ export default async function WorkspaceLayout({
       workspace={current.data}
       workspaces={workspaces}
       email={user.email ?? "Sua conta"}
+      userId={user.id}
       isOwner={memberships.data.role === "owner"}
     >
       {children}

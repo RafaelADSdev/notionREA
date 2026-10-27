@@ -7,5 +7,6 @@ export default defineConfig({
     environment: "jsdom",
     include: ["tests/unit/**/*.test.ts", "tests/spikes/**/*.test.ts"],
     restoreMocks: true,
+    maxWorkers: 4,
   },
 });

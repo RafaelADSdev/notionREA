@@ -4,7 +4,10 @@ export class PayloadLimitError extends Error {
   }
 }
 
-export async function readBoundedBytes(request: Request, limit: number): Promise<Uint8Array> {
+export async function readBoundedBytes(
+  request: Pick<Request, "headers" | "body">,
+  limit: number,
+): Promise<Uint8Array> {
   if (!Number.isSafeInteger(limit) || limit < 1) throw new Error("Invalid request budget");
   const declared = request.headers.get("content-length");
   if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > limit))
@@ -36,6 +39,9 @@ export async function readBoundedBytes(request: Request, limit: number): Promise
   return result;
 }
 
-export async function readBoundedJson(request: Request, limit: number): Promise<unknown> {
+export async function readBoundedJson(
+  request: Pick<Request, "headers" | "body">,
+  limit: number,
+): Promise<unknown> {
   return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await readBoundedBytes(request, limit)));
 }

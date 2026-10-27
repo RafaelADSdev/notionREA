@@ -59,6 +59,8 @@ jobs:
         run: pnpm test:perf
       - name: Build
         run: pnpm test:build
+      - name: Bounded editor validation capacity
+        run: pnpm test:perf:editor
       - name: Install Chromium and operating-system dependencies
         run: pnpm exec playwright install --with-deps chromium
       - name: Browser acceptance tests

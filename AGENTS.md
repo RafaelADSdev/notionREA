@@ -26,6 +26,7 @@
 - Preserve identidades de páginas e blocos, ordenação fracionária, paginação e índices. Não use substituição do documento inteiro como resolução de edição simultânea.
 - Leia metadados de página pela RPC `get_page_metadata` e projeções autorizadas; `parent_id` físico e campos internos não têm SELECT direto. Não reintroduza vazamento de ancestrais privados ao construir editor, relações ou exportações.
 - Recursos operáveis por teclado e foco gerenciado. Não enfraqueça testes, lint, tipos ou RLS.
+- O usuário pediu reduzir execuções repetidas para acelerar: rode testes focados no comportamento alterado e concentre os gates gerais no fechamento do marco. Preserve as provas de permissões, persistência e concorrência; não remova testes existentes para obter aprovação.
 
 ## Comandos e gates
 

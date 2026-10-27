@@ -1,6 +1,7 @@
 node_modules/
 .next/
 .next-test/
+.editor-runtime/
 out/
 dist/
 coverage/

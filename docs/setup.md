@@ -130,6 +130,18 @@ O workflow versionado em `.github/workflows/ci.yml` reproduz os gates no Ubuntu 
 
 ## Falhas comuns
 
+### Conteúdo por blocos
+
+O build compila o validador isolado para `.editor-runtime/validation-worker.mjs`; desenvolvimento mantém esse arquivo atualizado junto ao Next. O artefato é ignorado pelo Git e incluído no tracing da rota de documentos. Use o build completo ao preparar o pacote; copiar apenas os fontes da rota não inclui seu validador.
+
+O salvamento transmite deltas Yjs de até 256 KiB, com identidade de operação e confirmação durável. O bootstrap divide a leitura por revisão em chunks de 512 KiB. A validação limita estado e projeção a 8 MiB cada; duas gravações podem ler/validar/confirmar simultaneamente por instância, com oito aguardando. Excesso recebe erro recuperável, sem descartar o rascunho. A sessão de edição oferece retry e cópia do texto pendente; fechar abruptamente a aba antes da confirmação ainda pode perder esse rascunho em memória.
+
+Arquivos usam upload direto privado de até 25 MiB; anexos baixam como binário, imagens exigem formato e dimensões verificados. A finalização limita tentativas por pessoa/workspace e não libera acesso público por conta própria. Uma mudança de permissão exige nova autorização para leitura, download e salvamento.
+
+Depois de compilar o runtime, `pnpm test:perf:editor` verifica o limite de três segundos com 5.000 blocos, dois workers concorrentes e lotes causais; registra bytes, máquina e heap amostrado, sem conteúdo pessoal. Essa prova mede validação, não a latência de digitação nem a renderização no navegador.
+
+## Diagnóstico local
+
 - **Docker não responde:** abra o Docker Desktop e aguarde o engine Linux; no Windows, confirme WSL 2 funcional. Retome só depois de `docker info` passar.
 - **Porta ocupada:** identifique o serviço antes de parar qualquer processo; não mude endpoints em apenas um componente.
 - **`.env.local` já existe:** o gerador preserva o arquivo. Não o apague para contornar sem revisar o que precisa manter.

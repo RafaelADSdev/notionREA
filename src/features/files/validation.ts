@@ -19,6 +19,15 @@ export const coverUploadSchema = z.object({
   size: z.number().int().positive().max(MAX_FILE_BYTES),
 });
 
+export const blockUploadSchema = coverUploadSchema
+  .omit({ type: true })
+  .extend({
+    kind: z.enum(["image", "file"]),
+    type: z.string().max(255),
+  })
+  .transform((value) => ({ ...value, type: value.kind === "file" ? "application/octet-stream" : value.type }))
+  .refine((value) => value.kind === "file" || COVER_TYPES.some((type) => type === value.type));
+
 export function verifyImageBytes(
   bytes: Uint8Array,
   declaredType: string,
@@ -38,10 +47,10 @@ export function verifyImageBytes(
   return actual;
 }
 
-export function fileDisposition(name: string): string {
+export function fileDisposition(name: string, inline = true): string {
   const encoded = encodeURIComponent(name).replace(
     /['()*]/g,
     (value) => `%${value.charCodeAt(0).toString(16).toUpperCase()}`,
   );
-  return `inline; filename=cover; filename*=UTF-8''${encoded}`;
+  return `${inline ? "inline; filename=cover" : "attachment; filename=download"}; filename*=UTF-8''${encoded}`;
 }

@@ -4,10 +4,11 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Icon } from "@/components/icon";
+import { readBoundedJson } from "@/lib/http";
 
 export const searchResultSchema = z.object({
   id: z.uuid(),
-  title: z.string(),
+  title: z.string().max(500),
   rank: z.number(),
   updated_at: z.string(),
 });
@@ -27,7 +28,7 @@ export async function findPages(
     ...(signal ? { signal } : {}),
   });
   if (!response.ok) throw new Error("Não foi possível buscar. Confira sua conexão e tente novamente.");
-  return responseSchema.parse(await response.json());
+  return responseSchema.parse(await readBoundedJson(response, 128 * 1024));
 }
 
 const subscribeBody = () => () => {};
@@ -79,6 +80,7 @@ export function PageSearch({
   }
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         const selection = window.getSelection();
         const selectedElement = selection?.anchorNode?.parentElement;

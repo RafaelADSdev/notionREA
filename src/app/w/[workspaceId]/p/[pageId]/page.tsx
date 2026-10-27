@@ -9,6 +9,7 @@ import { PageList } from "@/features/pages/page-list";
 import { CreatePageControl } from "@/features/pages/create-control";
 import { PageCover } from "@/features/pages/cover";
 import { BreadcrumbTrail } from "@/features/pages/breadcrumbs";
+import { PageEditor } from "@/features/editor/ui/page-editor";
 import { z } from "zod";
 
 export default async function PageDocument({
@@ -88,6 +89,13 @@ export default async function PageDocument({
           {page.title || "Página sem título"}
         </h1>
       )}
+      <PageEditor
+        key={pageId}
+        userId={user.id}
+        workspaceId={workspaceId}
+        pageId={pageId}
+        editable={editable}
+      />
       <section className="page-children">
         <div className="section-heading">
           <h2>Subpáginas</h2>

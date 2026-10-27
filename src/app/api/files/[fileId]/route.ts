@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
-import { fileDisposition } from "@/features/files/validation";
+import { COVER_TYPES, fileDisposition } from "@/features/files/validation";
+import { createClient } from "@/lib/supabase/server";
 
 const unavailable = () =>
   new Response("Arquivo indisponível.", {
@@ -27,11 +27,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
     .from("page-assets")
     .download(file.object_path);
   if (downloadError || !blob || blob.size !== file.actual_size) return unavailable();
+  const inline = COVER_TYPES.some((type) => type === file.mime_type);
   return new Response(blob, {
     headers: {
-      "Content-Type": file.mime_type,
+      "Content-Type": inline ? file.mime_type : "application/octet-stream",
       "Content-Length": String(blob.size),
-      "Content-Disposition": fileDisposition(file.original_name),
+      "Content-Disposition": fileDisposition(file.original_name, inline),
       "Cache-Control": "private, no-store, max-age=0",
       "X-Content-Type-Options": "nosniff",
       "Cross-Origin-Resource-Policy": "same-origin",

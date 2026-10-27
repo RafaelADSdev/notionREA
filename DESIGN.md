@@ -1,6 +1,6 @@
 ---
 name: Bloco
-description: Sistema mineral/editorial para autenticação, organização de páginas e trabalho em equipe.
+description: Sistema mineral/editorial para autenticação, páginas, editor de blocos e trabalho em equipe.
 colors:
   accent: "#344cb7"
   on-accent: "#ffffff"
@@ -25,6 +25,18 @@ colors:
   muted-dark: "#b3c1cc"
   line-dark: "#3b4e60"
   focus-dark: "#c4d0ff"
+  editor-green: "#255d44"
+  editor-green-dark: "#b1d9c7"
+  editor-yellow: "#6b530c"
+  editor-yellow-dark: "#e8d593"
+  editor-green-soft: "#deeee4"
+  editor-green-soft-dark: "#1c3d31"
+  editor-red-soft: "#f7dedb"
+  editor-red-soft-dark: "#4b2b33"
+  editor-yellow-soft: "#f3ebc8"
+  editor-yellow-soft-dark: "#453d1c"
+  editor-copper-soft: "#f3e2d7"
+  editor-copper-soft-dark: "#4b342a"
 typography:
   headline:
     fontFamily: '"Segoe UI", system-ui, sans-serif'
@@ -53,8 +65,22 @@ typography:
     fontSize: "13px"
     fontWeight: 400
     lineHeight: 1.6
+  editor-body:
+    fontFamily: '"Segoe UI", system-ui, sans-serif'
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.7
+  editor-code:
+    fontFamily: '"Cascadia Code", Consolas, monospace'
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: 1.65
 rounded:
   control: "7px"
+  editor-inline-control: "4px"
+  editor-selection: "5px"
+  editor-block: "6px"
+  editor-menu: "8px"
 spacing:
   compact: "10px"
   control: "12px"
@@ -103,6 +129,16 @@ components:
     backgroundColor: "{colors.accent-soft}"
     textColor: "{colors.accent}"
     padding: "12px"
+  editor-action:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.editor-block}"
+    padding: "8px 12px"
+  editor-command-selected:
+    backgroundColor: "{colors.accent-soft}"
+    textColor: "{colors.accent}"
+    rounded: "{rounded.editor-selection}"
+    padding: "8px 12px"
 ---
 
 # Sistema visual: Bloco
@@ -111,17 +147,18 @@ components:
 
 **Direção criativa: "Mineral/editorial"**
 
-O sistema entregue combina papel quente, tinta azulada e planos discretos para autenticação, navegação de workspace, organização de páginas e gestão de equipe. O ritmo editorial aparece na hierarquia tipográfica e no espaço entre grupos; os controles mantêm uma linguagem operacional de uso frequente. Listas de páginas e subpáginas usam linhas contínuas e espaço aberto.
+O sistema entregue combina papel quente, tinta azulada e planos discretos para autenticação, navegação de workspace, organização de páginas, escrita por blocos e gestão de equipe. O ritmo editorial aparece na hierarquia tipográfica e no espaço entre grupos; os controles mantêm uma linguagem operacional de uso frequente. Listas de páginas e subpáginas usam linhas contínuas e espaço aberto; o editor mantém o texto no mesmo plano de trabalho.
 
-O símbolo autoral de três lâminas e o ponto cobre identificam o produto. A tipografia do sistema e os temas claro/escuro preservam a direção aprovada em PRODUCT.md e na ADR-006. Este registro deriva de `src/app/globals.css`, `src/features/pages/pages.css`, dos componentes compartilhados e dos domínios de autenticação, workspaces e páginas. As capturas sintéticas do M2 em `.impeccable/review/m2/` confirmam início, página, busca e navegação nos tamanhos desktop e móvel. O editor de blocos do M3 ainda não estabelece padrões neste registro.
+O símbolo autoral de três lâminas e o ponto cobre identificam o produto. A tipografia do sistema e os temas claro/escuro preservam a direção aprovada em PRODUCT.md e na ADR-006. Este registro deriva de `src/app/globals.css`, `src/features/pages/pages.css`, `src/features/editor/ui/editor.css`, dos componentes compartilhados e das superfícies implementadas até o M3. As capturas sintéticas de M2/M3 ficam em `.impeccable/review/`; este acréscimo foi extraído do código entregue do editor e da composição da rota de página, sem incluir as bases do M4.
 
 **Características principais:**
 
 - Planos de papel separados por tom e linhas finas.
-- Índigo para ação, seleção e orientação; cobre restrito à marca.
+- Índigo para ação, seleção e orientação; cobre na marca e no conteúdo do editor.
 - Controles discretamente arredondados e foco explícito.
 - Símbolos SVG autorais com traço consistente.
 - Páginas em listas de linhas; busca sobreposta e árvore lateral compacta.
+- Escrita contínua, ferramentas compactas e salvamento com retorno textual.
 
 ## Cores
 
@@ -135,8 +172,9 @@ A paleta associa neutros quentes no claro e petróleo no escuro aos mesmos papé
 
 ### Secundárias
 
-- **Cobre de assinatura** (`copper`, `copper-dark`): ponto da marca. A versão clara implementada ajusta a candidata inicial da ADR-006.
+- **Cobre de assinatura e conteúdo** (`copper`, `copper-dark`): ponto da marca, código inline, números/propriedades no código e cor de texto escolhida no editor. A versão clara implementada ajusta a candidata inicial da ADR-006.
 - **Vermelho de erro** (`error`, `error-dark`): mensagens de falha; a mensagem textual conserva o significado além da cor.
+- **Cores de conteúdo** (`editor-green`, `editor-yellow` e fundos `editor-*-soft`, com pares escuros): formatação escolhida para texto/fundo. O verde também distingue strings no código. A paleta de conteúdo reutiliza índigo, cobre e vermelho existentes; não cria novos estados de navegação.
 
 ### Neutras
 
@@ -147,7 +185,7 @@ A paleta associa neutros quentes no claro e petróleo no escuro aos mesmos papé
 - **Linha** (`line`): limites de controles, divisórias e linhas de tabela.
 - Os tokens com sufixo `-dark` preservam esses mesmos papéis no tema escuro.
 
-**Regra do Acento Funcional.** Use índigo para indicar ação e estado; o cobre pertence à assinatura da marca.
+**Regra do Acento Funcional.** Use índigo para indicar ação e estado da interface; cores aplicadas ao conteúdo e ao código conservam função de leitura, sem redefinir estados da navegação.
 
 ## Tipografia
 
@@ -155,7 +193,9 @@ A família operacional é Segoe UI, com alternativa do sistema e sans-serif. Nã
 
 Os títulos têm quebra equilibrada. O corpo usa entrelinha aberta; descrições principais limitam a largura de leitura (até 65ch), enquanto mensagens auxiliares são menores. Cabeçalhos de tabela e rótulos de contexto usam uma escala compacta (12px). Botões elevam o peso do rótulo (600).
 
-No M2, os títulos das listas usam escala de corpo com peso de seção. O nome editável da página usa a mesma família em escala maior, reduzida no móvel; é um campo de metadados, sem estabelecer tipografia para blocos. Árvore e breadcrumbs usam o papel auxiliar. Os títulos longos quebram nas listas e nos resultados; a árvore conserva uma linha com reticências.
+No M2, os títulos das listas usam escala de corpo com peso de seção. O nome editável da página usa a mesma família em escala maior, reduzida no móvel; é um campo de metadados. Árvore e breadcrumbs usam o papel auxiliar. Os títulos longos quebram nas listas e nos resultados; a árvore conserva uma linha com reticências.
+
+O M3 estabelece corpo de escrita com entrelinha própria e títulos de bloco em três níveis (32px, 26px e 21px; peso 600, entrelinha 1.3). Código usa a família monoespaçada do frontmatter, preserva espaços e rola horizontalmente; código inline reduz o corpo (0.9em). Menus combinam nome de comando (14px/600) e descrição auxiliar (12px); os seletores de cor conservam rótulos visíveis.
 
 **Regra da Hierarquia de Trabalho.** Diferencie títulos, texto e ações por escala e peso da mesma família operacional; mantenha os rótulos visíveis junto aos campos. O campo de nome da página usa nome acessível associado.
 
@@ -165,21 +205,25 @@ A estrutura usa navegação lateral recolhível (256px), barra de contexto com a
 
 A autenticação combina painel de marca e formulário limitado (392px). Abaixo do limite móvel (800px), o painel lateral desaparece, a marca acompanha o formulário e o conteúdo ocupa uma coluna. O workspace também passa a uma coluna; a navegação abre em diálogo lateral (até 300px ou 85vw). Tabelas preservam as colunas com rolagem horizontal. Formulários em linha quebram linha; suas ações principais passam à largura disponível no móvel.
 
-A página organiza breadcrumbs, capa opcional, ações de acesso/favorito, metadados, subpáginas e organização recolhível em sequência vertical. Favoritos reutilizam a lista de páginas. A lixeira mantém itens em fluxo vertical, separados por linha, com restauração junto ao item. A árvore recua por nível e limita o recuo em hierarquias profundas. A busca tem largura limitada e margem lateral preservada; seu conteúdo rola dentro da janela. No móvel, os cabeçalhos de seção e os controles de capa podem quebrar linha.
+A página organiza breadcrumbs, capa opcional, ações de acesso/favorito, metadados, editor, subpáginas e organização recolhível em sequência vertical. Favoritos reutilizam a lista de páginas. A lixeira mantém itens em fluxo vertical, separados por linha, com restauração junto ao item. A árvore recua por nível e limita o recuo em hierarquias profundas. A busca tem largura limitada e margem lateral preservada; seu conteúdo rola dentro da janela. No móvel, os cabeçalhos de seção e os controles de capa podem quebrar linha.
+
+O editor começa após divisória e respiro (16px); os blocos textuais permanecem em fluxo, com controles laterais e recuo próprio. Filhos recuam (24px; 14px no móvel). A toolbar conserva uma linha com rolagem horizontal e ocupa a largura disponível no móvel. Colunas usam larguras relativas e intervalo (24px), passando a uma coluna com intervalo menor (16px) no limite móvel existente. Tabelas simples preservam células e rolam dentro do bloco. Menus de slash/menção ficam limitados à janela, com margem mínima lateral (8px) e rolagem interna.
 
 **Regra do Plano de Trabalho.** Organize conteúdo por títulos, respiro e divisórias; páginas, subpáginas, lixeira e equipe mantêm listas contínuas no plano da página.
 
 ## Elevação e profundidade
 
-Os planos de trabalho são planos: diferença tonal e borda fina constroem profundidade. A sombra ambiente fica no controle flutuante de tema e nos diálogos de busca/confirmar movimento; a navegação móvel usa sombra lateral e fundo translúcido de sobreposição. Os diálogos também escurecem o contexto atrás deles. Os valores completos ficam nas extensões do sidecar, fora do esquema de tokens do frontmatter.
+Os planos de trabalho são planos: diferença tonal e borda fina constroem profundidade. A sombra ambiente fica no controle flutuante de tema, nos diálogos e nos menus sobrepostos do editor; a navegação móvel usa sombra lateral e fundo translúcido de sobreposição. Os diálogos também escurecem o contexto atrás deles. Callout e código recebem fundo tonal no fluxo. Os valores completos ficam nas extensões do sidecar, fora do esquema de tokens do frontmatter.
 
-**Regra da Sobreposição Visível.** Reserve sombra para controles flutuantes, diálogos e navegação sobreposta; mantenha tabelas, listas e formulários no plano da página.
+**Regra da Sobreposição Visível.** Reserve sombra ambiente para controles flutuantes, menus, diálogos e navegação sobreposta; mantenha tabelas, listas e formulários no plano da página. O realce fino de foco ou seleção pertence ao estado do elemento.
 
 ## Formas
 
 Campos, botões, feedback e navegação compartilham cantos suavizados pelo token `control`. Bordas de um pixel definem limites sem relevo. Etiquetas de acesso são cápsulas; o avatar de inicial é um pequeno quadrado arredondado. Esses formatos têm funções distintas e não substituem a geometria dos controles.
 
 Os ícones da interface são SVG de contorno, com espessura consistente (1.65), extremidades e junções arredondadas. As três lâminas reaparecem como assinatura em diferentes tamanhos. Um emoji escolhido como ícone de página pertence ao conteúdo do usuário e não define a iconografia da interface. A estrela do favorito passa de contorno a preenchimento quando ativa. Capas usam o arredondamento de controle e recorte central; são conteúdo opcional, sem imagem de marca padrão.
+
+O editor introduz cantos compactos em controles inline, seleção, blocos tonais e menus; o frontmatter registra os papéis recorrentes. Imagens mantêm proporção, cabem na largura do conteúdo e usam contenção, sem recorte editorial obrigatório.
 
 ## Componentes
 
@@ -215,6 +259,28 @@ Mover página e enviar à lixeira ficam em seção recolhível com divisória. A
 
 Mensagens informativas usam fundo de seleção e borda; erros usam superfície e texto de erro. O conteúdo quebra palavras longas. As mensagens de formulário recebem foco após a resposta e distinguem status de alerta.
 
+### Escrita e ferramentas do editor
+
+Cada bloco conserva sua área textual ao transformar ou mover; títulos, listas, tarefas, citação e código mudam apresentação sem substituir o texto. O corpo mantém cursor índigo, quebra de palavras e foco local por linha fina. A seleção estrutural usa fundo índigo diluído; arraste tem anúncio e operação por teclado. Ações de bloco ficam em painel sobreposto com duplicação, transformação, remoção e destino textual para movimento.
+
+A toolbar reúne marks, link e seletores de cor com rótulos visíveis. Botões mantêm estado pressionado e alvo mínimo (44px); setas, Home e End percorrem controles disponíveis. Tarefas associam a ação de concluir ao texto do item e centralizam o checkbox em área (44 × 44px). Toggle conserva botão de expandir/recolher e estado acessível.
+
+### Blocos compostos e mídia
+
+Citação usa linha lateral e recuo; callout usa fundo de seleção e seletor de tom. Código usa painel, borda fina, linguagem visível e coloração sintática por papel. A tabela simples combina cabeçalho tonal, células delimitadas e seleção retangular com fundo e contorno de ação; os comandos de seleção e limpeza têm instrução textual, independente da seleção estrutural de blocos. Colunas expõem largura relativa, adição e remoção; remover pede confirmação e informa a transferência dos blocos à vizinha, com foco de retorno.
+
+Imagens e arquivos privados usam placeholder tonal, legenda e controles associados. A imagem permite descrição e largura; o arquivo mostra nome e tamanho no link. Envio comunica preparação, progresso, confirmação, cancelamento e nova tentativa junto ao bloco; estados de trabalho usam `aria-busy`, progresso nomeado e retorno de status.
+
+### Menus e diálogos do editor
+
+Slash e menção compartilham superfície, linha fina, sombra ambiente, título e opções tonais. O foco continua na caixa de texto, que referencia a lista e a opção ativa; setas percorrem, Enter escolhe e Escape fecha. Opções de slash têm nome e descrição, agrupadas por função. Menção comunica busca, vazio e falha, apresentando títulos obtidos por consulta autorizada. Links e confirmações de tabela/coluna reutilizam diálogo modal com fundo escurecido, ações explícitas e recuperação de foco.
+
+### Salvamento e rascunhos
+
+Uma linha de status antecede as ferramentas e comunica carregamento, alterações locais, envio, salvo, falha, acesso indisponível e versão incompatível por texto, com anúncio discreto. A falha oferece nova tentativa; alterações pendentes oferecem cópia do rascunho e continuam identificadas na sessão. Rascunhos de outra página aparecem em faixa de superfície, com ações para voltar e copiar. Sair aguarda envio e pede confirmação nativa se ainda houver alterações não confirmadas; o controle fica ocupado durante a operação. Esse tratamento não estabelece modo offline nem recuperação após encerrar a sessão.
+
+**Regra do Estado Recuperável.** Mantenha status e ação de recuperação próximos ao conteúdo afetado; pendência, falha e indisponibilidade precisam de mensagem textual.
+
 ### Equipe e etiquetas
 
 A tabela separa pessoas por linhas finas, alinha ações com os dados e usa cabeçalhos compactos. Etiquetas de acesso usam fundo índigo diluído e texto de ação; não são botões. O avatar mostra uma inicial com os mesmos papéis de cor.
@@ -229,12 +295,13 @@ As transições se limitam a cor e fundo dos botões e da navegação (140ms, ea
 - **Preserve** rótulos, estados de pendência e mensagens de recuperação junto à ação.
 - **Use** SVG autoral consistente e divisórias finas para estruturar o trabalho.
 - **Reutilize** as listas por linhas para páginas e subpáginas, com controles de navegação e movimento separados.
+- **Preserve** texto e foco nas operações do editor; menus inline relacionam a caixa de texto à opção ativa.
 
 ### Restrições:
 
 - **Não importe** identidade, fontes, ícones ou estilos recuperados do produto de referência.
 - **Não trate** uma cor candidata da ADR como valor implementado; os tokens deste registro descrevem o CSS entregue.
 - **Não promova** medidas pontuais de uma superfície a uma regra global.
-- **Não infira** padrões do editor de blocos a partir dos campos de título e ícone do M2.
+- **Não confunda** salvamento pendente na sessão com garantia de modo offline ou rascunho persistente após fechar o navegador.
 
-Não canonizados: o título ampliado em fonte de sistema da lateral de autenticação e o espaçamento pontual entre letras da marca (-0.045em) não viram tokens reutilizáveis; o primeiro é uma recusa de acabamento para voz de destaque, e o segundo fica abaixo do piso de espaçamento entre letras. A família operacional aprovada permanece registrada para títulos de trabalho, corpo e controles.
+Não canonizados: o título ampliado em fonte de sistema da lateral de autenticação, o espaçamento pontual entre letras da marca (-0.045em) e o glifo de exclamação usado como símbolo de callout não viram padrões reutilizáveis; são desvios do piso de acabamento para voz de destaque, espaçamento e iconografia. A família operacional aprovada permanece registrada para títulos de trabalho, corpo e controles; letras de formatação são abreviações do comando.

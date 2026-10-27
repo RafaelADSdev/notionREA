@@ -8,8 +8,9 @@
     "node": ">=24.19.0 <25"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/editor-runtime.mjs && next build",
+    "editor:build": "node scripts/editor-runtime.mjs",
     "start": "next start",
     "lint": "biome lint . --error-on-warnings && eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
@@ -17,6 +18,7 @@
     "test:spike": "vitest run tests/spikes",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:perf": "node tests/performance/pages.mjs",
+    "test:perf:editor": "node tests/performance/editor-validation.mjs",
     "local:env": "node scripts/local-env.mjs",
     "test:e2e": "playwright test",
     "test:env": "node scripts/test-stack.mjs start",
@@ -57,6 +59,7 @@
     "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.3",
     "jsdom": "27.4.0",

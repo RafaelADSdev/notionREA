@@ -6,6 +6,7 @@
       "**",
       "!**/.next",
       "!**/.next-test",
+      "!**/.editor-runtime",
       "!**/node_modules",
       "!**/.supabase",
       "!**/.impeccable",

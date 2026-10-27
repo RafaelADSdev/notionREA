@@ -87,6 +87,43 @@ export type Database = {
           },
         ];
       };
+      page_backlinks: {
+        Row: {
+          source_page_id: string;
+          source_revision: number;
+          target_page_id: string;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          source_page_id: string;
+          source_revision: number;
+          target_page_id: string;
+          workspace_id: string;
+        };
+        Update: {
+          source_page_id?: string;
+          source_revision?: number;
+          target_page_id?: string;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "page_backlinks_source_page_id_workspace_id_fkey";
+            columns: ["source_page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+          {
+            foreignKeyName: "page_backlinks_target_page_id_workspace_id_fkey";
+            columns: ["target_page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
+          },
+        ];
+      };
       page_favorites: {
         Row: {
           created_at: string;
@@ -131,10 +168,13 @@ export type Database = {
           expected_size: number;
           finalized_at: string | null;
           id: string;
+          image_height: number | null;
+          image_width: number | null;
           mime_type: string;
           object_path: string;
           original_name: string;
           page_id: string;
+          purpose: string;
           sha256: string | null;
           status: string;
           uploaded_by: string;
@@ -147,10 +187,13 @@ export type Database = {
           expected_size: number;
           finalized_at?: string | null;
           id?: string;
+          image_height?: number | null;
+          image_width?: number | null;
           mime_type: string;
           object_path: string;
           original_name: string;
           page_id: string;
+          purpose?: string;
           sha256?: string | null;
           status?: string;
           uploaded_by: string;
@@ -162,10 +205,13 @@ export type Database = {
           expected_size?: number;
           finalized_at?: string | null;
           id?: string;
+          image_height?: number | null;
+          image_width?: number | null;
           mime_type?: string;
           object_path?: string;
           original_name?: string;
           page_id?: string;
+          purpose?: string;
           sha256?: string | null;
           status?: string;
           uploaded_by?: string;
@@ -215,6 +261,39 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "workspace_members";
             referencedColumns: ["workspace_id", "user_id"];
+          },
+        ];
+      };
+      page_search_chunks: {
+        Row: {
+          chunk_index: number;
+          page_id: string;
+          search_vector: unknown;
+          source_revision: number;
+          workspace_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          chunk_index: number;
+          page_id: string;
+          search_vector: unknown;
+          source_revision: number;
+          workspace_id: string;
+        };
+        Update: {
+          chunk_index?: number;
+          page_id?: string;
+          search_vector?: unknown;
+          source_revision?: number;
+          workspace_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "page_search_chunks_page_id_workspace_id_fkey";
+            columns: ["page_id", "workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "pages";
+            referencedColumns: ["id", "workspace_id"];
           },
         ];
       };
@@ -423,6 +502,19 @@ export type Database = {
     Functions: {
       accept_invite: { Args: { p_token: string }; Returns: string };
       clear_page_cover: { Args: { p_expected_revision: number; p_page_id: string }; Returns: number };
+      commit_content_document: {
+        Args: {
+          p_actor_id: string;
+          p_expected_revision: number;
+          p_hash: string;
+          p_operation_id: string;
+          p_page_id: string;
+          p_payload: string;
+          p_projection: Json;
+          p_snapshot: string;
+        };
+        Returns: number;
+      };
       commit_document: {
         Args: {
           p_actor_id: string;
@@ -449,6 +541,17 @@ export type Database = {
         Returns: string;
       };
       create_workspace: { Args: { p_name: string; p_request_id: string }; Returns: string };
+      finalize_page_block_file: {
+        Args: {
+          p_actor_id: string;
+          p_actual_size: number;
+          p_file_id: string;
+          p_height?: number;
+          p_sha256: string;
+          p_width?: number;
+        };
+        Returns: string;
+      };
       finalize_page_cover: {
         Args: {
           p_actor_id: string;
@@ -459,8 +562,24 @@ export type Database = {
         };
         Returns: number;
       };
+      get_document_manifest: {
+        Args: { p_page_id: string };
+        Returns: {
+          byte_length: number;
+          revision: number;
+          schema_version: number;
+        }[];
+      };
       get_page_metadata: { Args: { p_page_id: string; p_workspace_id: string }; Returns: Json };
       get_page_role: { Args: { p_page_id: string }; Returns: string };
+      list_page_backlinks: {
+        Args: { p_after_id?: string; p_page_id: string };
+        Returns: {
+          icon: string;
+          id: string;
+          title: string;
+        }[];
+      };
       list_page_breadcrumbs: {
         Args: { p_after_depth?: number; p_page_id: string };
         Returns: {
@@ -516,12 +635,30 @@ export type Database = {
         };
         Returns: Json;
       };
+      prepare_block_file: {
+        Args: { p_kind: string; p_mime_type: string; p_name: string; p_page_id: string; p_size: number };
+        Returns: string;
+      };
       prepare_page_file: {
         Args: { p_mime_type: string; p_name: string; p_page_id: string; p_size: number };
         Returns: string;
       };
+      read_document_chunk: {
+        Args: { p_offset?: number; p_page_id: string; p_revision: number };
+        Returns: string;
+      };
       remove_member: { Args: { p_user_id: string; p_workspace_id: string }; Returns: undefined };
       remove_page: { Args: { p_expected_revision: number; p_page_id: string }; Returns: string };
+      reserve_document_validation: { Args: { p_actor_id: string; p_page_id: string }; Returns: undefined };
+      reserve_page_file_validation: { Args: { p_actor_id: string; p_file_id: string }; Returns: undefined };
+      resolve_page_mentions: {
+        Args: { p_page_ids: string[]; p_workspace_id: string };
+        Returns: {
+          icon: string;
+          id: string;
+          title: string;
+        }[];
+      };
       restore_page: {
         Args: {
           p_accept_acl_change?: boolean;

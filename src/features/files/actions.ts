@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { coverUploadSchema, verifyImageBytes } from "./validation";
+import { verifyImageDimensions } from "./image-dimensions";
+import { coverUploadSchema, MAX_FILE_BYTES, verifyImageBytes } from "./validation";
+import { withFileValidation } from "./validation-slots";
 
 export type PreparedFileUpload = { fileId: string; path: string; token: string; signedUrl: string };
 export type PrepareCoverUploadResult = { ok: true; value: PreparedFileUpload } | { ok: false; error: string };
@@ -103,31 +105,62 @@ export async function finalizePageCover(fileId: string, expectedPageRevision: nu
   if (!user) throw new Error("Entre novamente para salvar a capa.");
   const { data: file, error } = await client
     .from("page_files")
-    .select("page_id,workspace_id,object_path,mime_type,expected_size,uploaded_by")
+    .select("page_id,workspace_id,object_path,mime_type,expected_size,uploaded_by,status,actual_size,sha256")
     .eq("id", input.data.fileId)
     .single();
-  if (error || !file || file.uploaded_by !== user.id)
+  if (
+    error ||
+    !file ||
+    file.uploaded_by !== user.id ||
+    file.expected_size < 1 ||
+    file.expected_size > MAX_FILE_BYTES
+  )
+    throw new Error("O envio não está disponível. Confira seu acesso à página.");
+  const role = await client.rpc("get_page_role", { p_page_id: file.page_id });
+  if (role.error || !["owner", "editor"].includes(role.data ?? ""))
     throw new Error("O envio não está disponível. Confira seu acesso à página.");
   const admin = createAdminClient();
-  const { data: blob, error: downloadError } = await admin.storage
-    .from("page-assets")
-    .download(file.object_path);
-  if (downloadError || !blob) throw new Error("O envio ainda não terminou. Tente salvar a capa novamente.");
-  if (blob.size !== file.expected_size)
-    throw new Error("O tamanho da imagem não corresponde ao arquivo informado.");
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  verifyImageBytes(bytes, file.mime_type, file.expected_size);
-  const { data: revision, error: finalizeError } = await admin.rpc("finalize_page_cover", {
+  const reservation = await admin.rpc("reserve_page_file_validation", {
     p_file_id: input.data.fileId,
     p_actor_id: user.id,
-    p_expected_revision: input.data.revision,
-    p_actual_size: bytes.length,
-    p_sha256: createHash("sha256").update(bytes).digest("hex"),
   });
-  if (finalizeError || revision === null)
-    throw new Error("A página mudou ou o acesso expirou. Recarregue antes de salvar a capa novamente.");
-  revalidatePath(`/w/${file.workspace_id}`, "layout");
-  return revision;
+  if (reservation.error) throw new Error("O envio não está disponível. Aguarde e tente novamente.");
+  if (file.status === "ready") {
+    if (file.actual_size === null || !file.sha256) throw new Error("O envio não está disponível.");
+    const finalized = await admin.rpc("finalize_page_cover", {
+      p_file_id: input.data.fileId,
+      p_actor_id: user.id,
+      p_expected_revision: input.data.revision,
+      p_actual_size: file.actual_size,
+      p_sha256: file.sha256,
+    });
+    if (finalized.error || finalized.data === null)
+      throw new Error("A página mudou ou o acesso expirou. Recarregue antes de salvar a capa novamente.");
+    revalidatePath(`/w/${file.workspace_id}`, "layout");
+    return finalized.data;
+  }
+  return await withFileValidation(async () => {
+    const { data: blob, error: downloadError } = await admin.storage
+      .from("page-assets")
+      .download(file.object_path);
+    if (downloadError || !blob) throw new Error("O envio ainda não terminou. Tente salvar a capa novamente.");
+    if (blob.size !== file.expected_size)
+      throw new Error("O tamanho da imagem não corresponde ao arquivo informado.");
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    verifyImageBytes(bytes, file.mime_type, file.expected_size);
+    verifyImageDimensions(bytes, file.mime_type);
+    const { data: revision, error: finalizeError } = await admin.rpc("finalize_page_cover", {
+      p_file_id: input.data.fileId,
+      p_actor_id: user.id,
+      p_expected_revision: input.data.revision,
+      p_actual_size: bytes.length,
+      p_sha256: createHash("sha256").update(bytes).digest("hex"),
+    });
+    if (finalizeError || revision === null)
+      throw new Error("A página mudou ou o acesso expirou. Recarregue antes de salvar a capa novamente.");
+    revalidatePath(`/w/${file.workspace_id}`, "layout");
+    return revision;
+  });
 }
 
 export async function clearPageCover(pageId: string, expectedPageRevision: number): Promise<number> {

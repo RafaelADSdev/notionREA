@@ -8,6 +8,7 @@ export default defineConfig([
   globalIgnores([
     ".next/**",
     ".next-test/**",
+    ".editor-runtime/**",
     "out/**",
     "coverage/**",
     ".supabase/**",

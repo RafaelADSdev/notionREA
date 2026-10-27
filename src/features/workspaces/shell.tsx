@@ -4,22 +4,29 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Brand, Icon } from "@/components/icon";
-import { signOut } from "@/features/auth/actions";
+import { SafeSignOut } from "@/features/editor/ui/safe-sign-out";
 import { PageSearch } from "@/features/pages/search";
 import { PageTree } from "@/features/pages/page-tree";
 import { CreatePageControl } from "@/features/pages/create-control";
+import dynamic from "next/dynamic";
+
+const PendingDrafts = dynamic(() =>
+  import("@/features/editor/ui/pending-drafts").then((module) => module.PendingDrafts),
+);
 
 type Workspace = { id: string; name: string };
 export function WorkspaceShell({
   workspace,
   workspaces,
   email,
+  userId,
   isOwner,
   children,
 }: {
   workspace: Workspace;
   workspaces: Workspace[];
   email: string;
+  userId: string;
   isOwner: boolean;
   children: React.ReactNode;
 }) {
@@ -34,6 +41,15 @@ export function WorkspaceShell({
   const [searchNavigation, setSearchNavigation] = useState(0);
   const home = `/w/${workspace.id}`;
   const isMembers = path.endsWith("/members");
+  useEffect(() => {
+    let active = true;
+    void import("@/features/editor/client/editor-session").then((module) => {
+      if (active) module.clearOtherEditorSessions(userId);
+    });
+    return () => {
+      active = false;
+    };
+  }, [userId]);
   const label = isMembers
     ? "Equipe"
     : path.endsWith("/favorites")
@@ -177,16 +193,7 @@ export function WorkspaceShell({
             {email}
           </div>
         </div>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="nav-link"
-            style={{ width: "100%", border: 0, background: "transparent" }}
-          >
-            <Icon name="exit" />
-            Sair
-          </button>
-        </form>
+        <SafeSignOut key={userId} userId={userId} />
       </div>
     </>
   );
@@ -242,6 +249,7 @@ export function WorkspaceShell({
           </div>
           <span className="workspace-label">Um espaço em construção conjunta.</span>
         </header>
+        <PendingDrafts userId={userId} />
         <main id="main" ref={main} tabIndex={-1} className="workspace-main">
           {children}
         </main>
